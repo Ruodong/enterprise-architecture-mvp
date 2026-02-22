@@ -1,20 +1,10 @@
 import './globals.css'
-import Link from 'next/link'
-import { AppWindowMac, Boxes, Cpu, Layers3, LayoutList, Network, Server } from 'lucide-react'
+import { AppWindowMac } from 'lucide-react'
+import { AppNav } from '@/components/app-nav'
 
 export const metadata = {
   title: 'Enterprise Architecture Console'
 }
-
-const links = [
-  { label: '业务应用', href: '/applications', icon: AppWindowMac },
-  { label: '业务能力', href: '/capabilities', icon: Boxes },
-  { label: '技术栈', href: '/stacks', icon: Layers3 },
-  { label: '技术平台', href: '/platforms', icon: Server },
-  { label: '视角 · 按应用', href: '/views/applications', icon: LayoutList },
-  { label: '视角 · 按业务能力', href: '/views/capabilities', icon: Network },
-  { label: '视角 · 按技术平台', href: '/views/platforms', icon: Cpu }
-]
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -37,18 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="grid gap-4 md:grid-cols-[255px_1fr]">
             <aside className="panel h-fit p-3">
               <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Navigation</p>
-              <nav className="space-y-1">
-                {links.map(({ label, href, icon: Icon }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-white/90 hover:text-slate-900"
-                  >
-                    <Icon className="h-4 w-4 text-slate-500" />
-                    <span>{label}</span>
-                  </Link>
-                ))}
-              </nav>
+              <AppNav />
             </aside>
 
             <main>{children}</main>

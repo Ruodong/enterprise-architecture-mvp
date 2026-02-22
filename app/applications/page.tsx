@@ -105,24 +105,30 @@ export default async function ApplicationsPage({
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-t border-slate-100/90 hover:bg-sky-50/40">
-                  <td>
-                    <Link href={`/applications/${item.id}`} className="inline-flex items-center gap-2 font-medium text-slate-900 hover:text-sky-700">
-                      <AppWindowMac className="h-4 w-4 text-slate-500" />
-                      {item.name}
-                    </Link>
-                    <p className="mt-1 line-clamp-1 text-xs text-slate-500">{item.description || '-'}</p>
-                  </td>
-                  <td>{item.owner || '-'}</td>
-                  <td>
-                    <Badge tone={toneByLifecycle(item.lifecycleStatus)}>{item.lifecycleStatus}</Badge>
-                  </td>
-                  <td className="font-medium text-slate-600"><Grid2x2 className="mr-1 inline h-3.5 w-3.5" />{item.capabilityLinks.length}</td>
-                  <td className="font-medium text-slate-600"><CircleDot className="mr-1 inline h-3.5 w-3.5" />{item.stackLinks.length}</td>
-                  <td className="font-medium text-slate-600"><Server className="mr-1 inline h-3.5 w-3.5" />{item.platformLinks.length}</td>
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">没有匹配的数据，试试调整筛选条件。</td>
                 </tr>
-              ))}
+              ) : (
+                items.map((item) => (
+                  <tr key={item.id} className="border-t border-slate-100/90 hover:bg-sky-50/40">
+                    <td>
+                      <Link href={`/applications/${item.id}`} className="inline-flex items-center gap-2 font-medium text-slate-900 hover:text-sky-700">
+                        <AppWindowMac className="h-4 w-4 text-slate-500" />
+                        {item.name}
+                      </Link>
+                      <p className="mt-1 line-clamp-1 text-xs text-slate-500">{item.description || '-'}</p>
+                    </td>
+                    <td>{item.owner || '-'}</td>
+                    <td>
+                      <Badge tone={toneByLifecycle(item.lifecycleStatus)}>{item.lifecycleStatus}</Badge>
+                    </td>
+                    <td className="font-medium text-slate-600"><Grid2x2 className="mr-1 inline h-3.5 w-3.5" />{item.capabilityLinks.length}</td>
+                    <td className="font-medium text-slate-600"><CircleDot className="mr-1 inline h-3.5 w-3.5" />{item.stackLinks.length}</td>
+                    <td className="font-medium text-slate-600"><Server className="mr-1 inline h-3.5 w-3.5" />{item.platformLinks.length}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -18,18 +18,22 @@ export default async function CapabilitiesPage() {
         <h2 className="section-title">业务能力地图</h2>
         <p className="mb-4 muted">查看能力沉淀情况和被应用覆盖程度。</p>
         <div className="space-y-2">
-          {items.map((item) => (
-            <Link key={item.id} href={`/capabilities/${item.id}`} className="flex items-center justify-between rounded-xl border border-slate-200/85 bg-white/90 p-3.5 hover:border-sky-200 hover:bg-sky-50/40">
-              <div>
-                <div className="inline-flex items-center gap-2 font-medium text-slate-900"><Boxes className="h-4 w-4 text-slate-500" />{item.name}</div>
-                <div className="text-xs text-slate-500">Owner: {item.owner || '-'}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge tone="slate">{item.lifecycleStatus}</Badge>
-                <Badge tone="blue">关联应用 {item.appLinks.length}</Badge>
-              </div>
-            </Link>
-          ))}
+          {items.length === 0 ? (
+            <div className="rounded-xl border border-slate-200/85 bg-white/90 p-8 text-center text-sm text-slate-500">暂无业务能力数据</div>
+          ) : (
+            items.map((item) => (
+              <Link key={item.id} href={`/capabilities/${item.id}`} className="flex items-center justify-between rounded-xl border border-slate-200/85 bg-white/90 p-3.5 hover:border-sky-200 hover:bg-sky-50/40">
+                <div>
+                  <div className="inline-flex items-center gap-2 font-medium text-slate-900"><Boxes className="h-4 w-4 text-slate-500" />{item.name}</div>
+                  <div className="text-xs text-slate-500">Owner: {item.owner || '-'}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge tone="slate">{item.lifecycleStatus}</Badge>
+                  <Badge tone="blue">关联应用 {item.appLinks.length}</Badge>
+                </div>
+              </Link>
+            ))
+          )}
         </div>
       </Card>
 
