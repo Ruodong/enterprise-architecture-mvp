@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LifecycleStatus {
+  PLANNED
+  ACTIVE
+  SUNSETTING
+  RETIRED
+}
+
+model BusinessCapability {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?
+  owner           String?
+  lifecycleStatus LifecycleStatus @default(ACTIVE)
+  validFrom       DateTime?
+  validTo         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  appLinks        ApplicationCapability[]
+
+  @@index([lifecycleStatus])
+  @@index([deletedAt])
+}
+
+model BusinessApplication {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?
+  owner           String?
+  lifecycleStatus LifecycleStatus @default(ACTIVE)
+  validFrom       DateTime?
+  validTo         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  capabilityLinks ApplicationCapability[]
+  stackLinks      ApplicationTechStack[]
+  platformLinks   ApplicationTechPlatform[]
+
+  @@index([lifecycleStatus])
+  @@index([deletedAt])
+}
+
+model TechStack {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  category        String?
+  description     String?
+  lifecycleStatus LifecycleStatus @default(ACTIVE)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  appLinks        ApplicationTechStack[]
+
+  @@index([category])
+  @@index([lifecycleStatus])
+  @@index([deletedAt])
+}
+
+model TechPlatform {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  vendor          String?
+  description     String?
+  lifecycleStatus LifecycleStatus @default(ACTIVE)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  appLinks        ApplicationTechPlatform[]
+
+  @@index([vendor])
+  @@index([lifecycleStatus])
+  @@index([deletedAt])
+}
+
+model ApplicationCapability {
+  applicationId String
+  capabilityId  String
+  createdAt     DateTime @default(now())
+
+  application   BusinessApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  capability    BusinessCapability  @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+
+  @@id([applicationId, capabilityId])
+  @@index([capabilityId])
+}
+
+model ApplicationTechStack {
+  applicationId String
+  stackId       String
+  createdAt     DateTime @default(now())
+
+  application   BusinessApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  stack         TechStack           @relation(fields: [stackId], references: [id], onDelete: Cascade)
+
+  @@id([applicationId, stackId])
+  @@index([stackId])
+}
+
+model ApplicationTechPlatform {
+  applicationId String
+  platformId    String
+  createdAt     DateTime @default(now())
+
+  application   BusinessApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  platform      TechPlatform        @relation(fields: [platformId], references: [id], onDelete: Cascade)
+
+  @@id([applicationId, platformId])
+  @@index([platformId])
+}

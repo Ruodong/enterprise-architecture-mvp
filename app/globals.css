@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-slate-100 text-slate-900 antialiased;
+  background-image: radial-gradient(circle at top right, #dbeafe 0%, transparent 40%);
+}
+
+@layer components {
+  .panel {
+    @apply rounded-xl border border-slate-200 bg-white/95 shadow-sm;
+  }
+
+  .kpi-card {
+    @apply rounded-xl border border-slate-200 bg-white/95 p-4 shadow-sm;
+  }
+
+  .data-table th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+
+  .data-table td {
+    @apply px-4 py-3 text-sm text-slate-700;
+  }
+}
