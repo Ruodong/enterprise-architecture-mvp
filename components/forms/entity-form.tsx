@@ -16,7 +16,7 @@ export function EntityForm({
 }) {
   const status = defaults?.lifecycleStatus ?? 'ACTIVE'
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-3.5">
       {fields.includes('name') && (
         <div>
           <Label>名称</Label>
@@ -49,7 +49,7 @@ export function EntityForm({
       )}
       <div>
         <Label>生命周期</Label>
-        <select name="lifecycleStatus" defaultValue={status} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+        <select name="lifecycleStatus" defaultValue={status} className="mac-input">
           <option value="PLANNED">PLANNED</option>
           <option value="ACTIVE">ACTIVE</option>
           <option value="SUNSETTING">SUNSETTING</option>
