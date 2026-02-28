@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ChevronDown, ChevronRight, Network, Shuffle } from 'lucide-react'
+import { ChevronDown, ChevronRight, Link2, Network, Shuffle, X } from 'lucide-react'
 
 type Direction = 'capability' | 'application'
 type NodeType = 'capability' | 'application'
@@ -36,6 +36,7 @@ export function CapabilityApplicationTree({
   const [direction, setDirection] = useState<Direction>('capability')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<SelectedNode>(null)
+  const [copyHint, setCopyHint] = useState('')
 
   useEffect(() => {
     const urlDirection = searchParams.get('direction')
@@ -119,6 +120,30 @@ export function CapabilityApplicationTree({
 
   const collapseAll = () => setExpanded(new Set())
 
+  const buildSharePath = () => {
+    const params = new URLSearchParams()
+    params.set('direction', direction)
+    if (selected) {
+      params.set('nodeType', selected.type)
+      params.set('nodeId', selected.id)
+    }
+    return `${pathname}?${params.toString()}`
+  }
+
+  const copyCurrentViewLink = async () => {
+    if (typeof window === 'undefined') return
+    const path = buildSharePath()
+    const full = `${window.location.origin}${path}`
+    try {
+      await navigator.clipboard.writeText(full)
+      setCopyHint('已复制链接')
+      setTimeout(() => setCopyHint(''), 1500)
+    } catch {
+      setCopyHint('复制失败')
+      setTimeout(() => setCopyHint(''), 1500)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-4">
@@ -171,6 +196,21 @@ export function CapabilityApplicationTree({
         <button onClick={collapseAll} className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-200">
           全部收起
         </button>
+        <button
+          onClick={copyCurrentViewLink}
+          className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-200"
+        >
+          <Link2 className="h-3.5 w-3.5" /> 复制当前视角链接
+        </button>
+        {selected ? (
+          <button
+            onClick={() => setSelected(null)}
+            className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-200"
+          >
+            <X className="h-3.5 w-3.5" /> 清空选中
+          </button>
+        ) : null}
+        {copyHint ? <span className="text-xs text-sky-700">{copyHint}</span> : null}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
