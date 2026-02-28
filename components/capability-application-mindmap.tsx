@@ -169,6 +169,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   const [detailHidden, setDetailHidden] = useState(false)
   const [highlightMultiApps, setHighlightMultiApps] = useState(false)
   const [mutedDomains, setMutedDomains] = useState<Set<string>>(new Set())
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clickDomainRef = useRef<string | null>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('ea.detailHidden')
@@ -337,6 +339,23 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     setMutedDomains(new Set(allOther))
   }
 
+  const handleDomainButtonClick = (domain: string) => {
+    if (clickTimerRef.current && clickDomainRef.current === domain) {
+      clearTimeout(clickTimerRef.current)
+      clickTimerRef.current = null
+      clickDomainRef.current = null
+      focusDomain(domain)
+      return
+    }
+
+    clickDomainRef.current = domain
+    clickTimerRef.current = setTimeout(() => {
+      toggleDomain(domain)
+      clickTimerRef.current = null
+      clickDomainRef.current = null
+    }, 220)
+  }
+
   const nodeMutedMap = new Map<string, boolean>()
   nodes.forEach((n) => {
     const domains = Array.from(new Set(n.applications.map((a) => getAppGroup(a.name)).filter((g) => g !== '其他')))
@@ -376,11 +395,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
               <button
                 key={group}
                 type="button"
-                onClick={(e) => {
-                  if (e.detail > 1) return
-                  toggleDomain(group)
-                }}
-                onDoubleClick={() => focusDomain(group)}
+                onClick={() => handleDomainButtonClick(group)}
                 className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5"
                 style={{
                   borderColor: isMuted ? p.mutedStroke : p.stroke,
