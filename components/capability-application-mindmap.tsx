@@ -288,6 +288,16 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     const from = nodeMap.get(fromId)
     const to = nodeMap.get(toId)
     if (!from || !to) return ''
+
+    if (layoutMode === 'tree') {
+      const x1 = from.x + from.width
+      const y1 = from.y + from.height / 2
+      const x2 = to.x
+      const y2 = to.y + to.height / 2
+      const midX = x1 + (x2 - x1) * 0.45
+      return `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`
+    }
+
     const x1 = from.x + from.width / 2
     const y1 = from.y + from.height / 2
     const x2 = to.x + to.width / 2
@@ -318,9 +328,13 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   }
 
   const focusDomain = (domain: string) => {
+    const hasAnyMuted = mutedDomains.size > 0
+    if (hasAnyMuted) {
+      setMutedDomains(new Set())
+      return
+    }
     const allOther = DOMAIN_GROUPS.filter((d) => d !== domain)
-    const alreadyFocused = allOther.every((d) => mutedDomains.has(d)) && !mutedDomains.has(domain)
-    setMutedDomains(alreadyFocused ? new Set() : new Set(allOther))
+    setMutedDomains(new Set(allOther))
   }
 
   const nodeMutedMap = new Map<string, boolean>()
@@ -438,21 +452,31 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
               {l1Nodes.map((n) => {
                 const active = selectedId === n.id
                 const muted = nodeMutedMap.get(n.id)
+                const stroke = active ? '#7dd3fc' : muted ? '#e2e8f0' : '#cbd5e1'
+                const strokeWidth = active ? 2.4 : 1.4
+
+                if (layoutMode === 'tree') {
+                  const x1 = centerX + 11
+                  const y1 = centerY
+                  const x2 = n.x
+                  const y2 = n.y + n.height / 2
+                  const midX = x1 + (x2 - x1) * 0.45
+                  return (
+                    <path
+                      key={`center-${n.id}`}
+                      d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`}
+                      fill="none"
+                      stroke={stroke}
+                      strokeWidth={strokeWidth}
+                    />
+                  )
+                }
+
                 const x1 = centerX
                 const y1 = centerY
                 const x2 = n.x + n.width / 2
                 const y2 = n.y + n.height / 2
-                return (
-                  <line
-                    key={`center-${n.id}`}
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
-                    stroke={active ? '#7dd3fc' : muted ? '#e2e8f0' : '#cbd5e1'}
-                    strokeWidth={active ? 2.4 : 1.4}
-                  />
-                )
+                return <line key={`center-${n.id}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={stroke} strokeWidth={strokeWidth} />
               })}
 
               {hierarchyEdges.map((edge) => {
