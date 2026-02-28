@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useMemo, useRef, useState } from 'react'
 
 type CapNode = {
   id: string
@@ -11,107 +11,81 @@ type CapNode = {
   applications: { id: string; name: string }[]
 }
 
-type AppNode = { id: string; name: string }
+type Position = { x: number; y: number }
 
-type PositionedNode = {
-  id: string
-  type: 'capability' | 'application'
-  name: string
-  x: number
-  y: number
-  width: number
-  height: number
-  level?: number
+const VIEWBOX_WIDTH = 1500
+const VIEWBOX_HEIGHT = 980
+const NODE_WIDTH = 320
+const NODE_HEADER_HEIGHT = 56
+const APP_BOX_HEIGHT = 24
+const APP_BOX_GAP = 8
+const NODE_INNER_GAP = 10
+
+function nodeHeight(appCount: number) {
+  const rows = Math.max(1, Math.ceil(appCount / 2))
+  return NODE_HEADER_HEIGHT + NODE_INNER_GAP + rows * APP_BOX_HEIGHT + (rows - 1) * 6 + NODE_INNER_GAP
 }
 
-export function CapabilityApplicationMindmap({ capabilities, applications }: { capabilities: CapNode[]; applications: AppNode[] }) {
-  const [selected, setSelected] = useState<{ id: string; type: 'capability' | 'application' } | null>(null)
-  const [scale, setScale] = useState(1)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
-  const [dragging, setDragging] = useState(false)
-  const [last, setLast] = useState({ x: 0, y: 0 })
+export function CapabilityApplicationMindmap({ capabilities }: { capabilities: CapNode[] }) {
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [dragging, setDragging] = useState<{ id: string; x: number; y: number } | null>(null)
 
-  const capabilityByLevel = useMemo(() => {
-    return [1, 2, 3].map((lv) => capabilities.filter((c) => c.level === lv))
+  const initialPositions = useMemo<Record<string, Position>>(() => {
+    const grouped = [1, 2, 3].map((lv) => capabilities.filter((c) => c.level === lv))
+    const colX = [80, 560, 1040]
+    const map: Record<string, Position> = {}
+
+    grouped.forEach((list, idx) => {
+      let cursorY = 80
+      list.forEach((cap) => {
+        map[cap.id] = { x: colX[idx], y: cursorY }
+        cursorY += nodeHeight(cap.applications.length) + 26
+      })
+    })
+
+    return map
   }, [capabilities])
 
-  const positioned = useMemo(() => {
-    const nodes: PositionedNode[] = []
-    const colX = [120, 420, 720]
+  const [positions, setPositions] = useState<Record<string, Position>>(initialPositions)
 
-    capabilityByLevel.forEach((list, idx) => {
-      list.forEach((cap, i) => {
-        nodes.push({
-          id: cap.id,
-          type: 'capability',
-          name: cap.name,
-          x: colX[idx],
-          y: 80 + i * 88,
-          width: 220,
-          height: 52,
-          level: cap.level
-        })
-      })
-    })
+  const nodes = useMemo(() => {
+    return capabilities.map((c) => ({
+      ...c,
+      x: positions[c.id]?.x ?? 0,
+      y: positions[c.id]?.y ?? 0,
+      width: NODE_WIDTH,
+      height: nodeHeight(c.applications.length)
+    }))
+  }, [capabilities, positions])
 
-    applications.forEach((app, i) => {
-      nodes.push({
-        id: app.id,
-        type: 'application',
-        name: app.name,
-        x: 1060,
-        y: 80 + i * 76,
-        width: 220,
-        height: 48
-      })
-    })
+  const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes])
 
-    return nodes
-  }, [applications, capabilityByLevel])
+  const hierarchyEdges = useMemo(
+    () => nodes.filter((n) => n.parentId).map((n) => ({ from: n.parentId as string, to: n.id })).filter((e) => nodeMap.has(e.from)),
+    [nodeMap, nodes]
+  )
 
-  const nodeMap = useMemo(() => new Map(positioned.map((n) => [n.id, n])), [positioned])
+  const selected = selectedId ? nodes.find((n) => n.id === selectedId) ?? null : null
 
-  const hierarchyEdges = useMemo(() => {
-    return capabilities
-      .filter((c) => c.parentId)
-      .map((c) => ({ from: c.parentId as string, to: c.id }))
-      .filter((e) => nodeMap.has(e.from) && nodeMap.has(e.to))
-  }, [capabilities, nodeMap])
-
-  const capabilityAppEdges = useMemo(() => {
-    const edges: Array<{ from: string; to: string }> = []
-    capabilities.forEach((c) => c.applications.forEach((a) => edges.push({ from: c.id, to: a.id })))
-    return edges.filter((e) => nodeMap.has(e.from) && nodeMap.has(e.to))
-  }, [capabilities, nodeMap])
-
-  const selectedDetail = useMemo(() => {
-    if (!selected) return null
-    if (selected.type === 'capability') {
-      const cap = capabilities.find((c) => c.id === selected.id)
-      if (!cap) return null
-      return {
-        title: `L${cap.level} 能力：${cap.name}`,
-        links: cap.applications.map((a) => ({ href: `/applications/${a.id}`, label: a.name })),
-        mainHref: `/capabilities/${cap.id}`,
-        mainLabel: '打开能力详情'
-      }
-    }
-    const app = applications.find((a) => a.id === selected.id)
-    if (!app) return null
-    const linkedCaps = capabilities.filter((c) => c.applications.some((a) => a.id === app.id))
+  const toSvgPoint = (clientX: number, clientY: number) => {
+    const svg = svgRef.current
+    if (!svg) return { x: clientX, y: clientY }
+    const rect = svg.getBoundingClientRect()
     return {
-      title: `应用：${app.name}`,
-      links: linkedCaps.map((c) => ({ href: `/capabilities/${c.id}`, label: `L${c.level} · ${c.name}` })),
-      mainHref: `/applications/${app.id}`,
-      mainLabel: '打开应用详情'
+      x: ((clientX - rect.left) / rect.width) * VIEWBOX_WIDTH,
+      y: ((clientY - rect.top) / rect.height) * VIEWBOX_HEIGHT
     }
-  }, [applications, capabilities, selected])
+  }
 
-  const curvePath = (a: PositionedNode, b: PositionedNode) => {
-    const x1 = a.x + a.width
-    const y1 = a.y + a.height / 2
-    const x2 = b.x
-    const y2 = b.y + b.height / 2
+  const curvePath = (fromId: string, toId: string) => {
+    const from = nodeMap.get(fromId)
+    const to = nodeMap.get(toId)
+    if (!from || !to) return ''
+    const x1 = from.x + from.width
+    const y1 = from.y + from.height / 2
+    const x2 = to.x
+    const y2 = to.y + to.height / 2
     const cx1 = x1 + (x2 - x1) * 0.35
     const cx2 = x1 + (x2 - x1) * 0.65
     return `M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`
@@ -120,82 +94,108 @@ export function CapabilityApplicationMindmap({ capabilities, applications }: { c
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <div className="rounded-2xl border border-slate-200 bg-white p-3">
-        <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
-          <button onClick={() => setScale((v) => Math.min(1.8, Number((v + 0.1).toFixed(2))))} className="rounded bg-slate-100 px-2 py-1">放大</button>
-          <button onClick={() => setScale((v) => Math.max(0.6, Number((v - 0.1).toFixed(2))))} className="rounded bg-slate-100 px-2 py-1">缩小</button>
-          <button onClick={() => { setScale(1); setOffset({ x: 0, y: 0 }) }} className="rounded bg-slate-100 px-2 py-1">重置视图</button>
-          <span>可拖拽画布，点击节点联动右侧</span>
-        </div>
-
+        <div className="mb-2 text-xs text-slate-500">提示：拖动任意能力节点可自由调整布局。浅色连线表示 L1 → L2 → L3 层级关系。</div>
         <svg
-          viewBox="0 0 1320 980"
-          className="h-[72vh] w-full cursor-grab rounded-xl bg-slate-50"
-          onMouseDown={(e) => {
-            setDragging(true)
-            setLast({ x: e.clientX, y: e.clientY })
-          }}
+          ref={svgRef}
+          viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
+          className="h-[74vh] w-full rounded-xl bg-slate-50"
           onMouseMove={(e) => {
             if (!dragging) return
-            const dx = e.clientX - last.x
-            const dy = e.clientY - last.y
-            setOffset((p) => ({ x: p.x + dx, y: p.y + dy }))
-            setLast({ x: e.clientX, y: e.clientY })
+            const p = toSvgPoint(e.clientX, e.clientY)
+            const dx = p.x - dragging.x
+            const dy = p.y - dragging.y
+            setPositions((prev) => ({
+              ...prev,
+              [dragging.id]: {
+                x: (prev[dragging.id]?.x ?? 0) + dx,
+                y: (prev[dragging.id]?.y ?? 0) + dy
+              }
+            }))
+            setDragging({ id: dragging.id, x: p.x, y: p.y })
           }}
-          onMouseUp={() => setDragging(false)}
-          onMouseLeave={() => setDragging(false)}
-          onWheel={(e) => {
-            e.preventDefault()
-            setScale((v) => Math.max(0.6, Math.min(1.8, Number((v + (e.deltaY > 0 ? -0.06 : 0.06)).toFixed(2)))))
-          }}
+          onMouseUp={() => setDragging(null)}
+          onMouseLeave={() => setDragging(null)}
         >
-          <g transform={`translate(${offset.x}, ${offset.y}) scale(${scale})`}>
-            {hierarchyEdges.map((edge) => {
-              const from = nodeMap.get(edge.from)!
-              const to = nodeMap.get(edge.to)!
-              const active = selected && (selected.id === edge.from || selected.id === edge.to)
-              return <path key={`h-${edge.from}-${edge.to}`} d={curvePath(from, to)} fill="none" stroke={active ? '#0284c7' : '#94a3b8'} strokeWidth={active ? 2.5 : 1.6} />
-            })}
+          {hierarchyEdges.map((edge) => {
+            const active = selectedId && (selectedId === edge.from || selectedId === edge.to)
+            return (
+              <path
+                key={`${edge.from}-${edge.to}`}
+                d={curvePath(edge.from, edge.to)}
+                fill="none"
+                stroke={active ? '#7dd3fc' : '#cbd5e1'}
+                strokeWidth={active ? 2.4 : 1.5}
+              />
+            )
+          })}
 
-            {capabilityAppEdges.map((edge) => {
-              const from = nodeMap.get(edge.from)!
-              const to = nodeMap.get(edge.to)!
-              const active = selected && (selected.id === edge.from || selected.id === edge.to)
-              return <path key={`r-${edge.from}-${edge.to}`} d={curvePath(from, to)} fill="none" stroke={active ? '#0ea5e9' : '#cbd5e1'} strokeWidth={active ? 2.1 : 1.2} strokeDasharray="5 5" opacity={active ? 1 : 0.85} />
-            })}
+          {nodes.map((n) => {
+            const appBoxWidth = (NODE_WIDTH - NODE_INNER_GAP * 3) / 2
+            const isSelected = selectedId === n.id
 
-            {positioned.map((n) => {
-              const isSelected = selected?.id === n.id
-              const fill = n.type === 'capability' ? '#eff6ff' : '#f8fafc'
-              const stroke = isSelected ? '#0284c7' : n.type === 'capability' ? '#93c5fd' : '#cbd5e1'
-              return (
-                <g key={n.id} onClick={() => setSelected({ id: n.id, type: n.type })} style={{ cursor: 'pointer' }}>
-                  <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={12} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2.2 : 1.4} />
-                  <text x={n.x + 12} y={n.y + 23} fill="#0f172a" fontSize="12" fontWeight="600">{n.type === 'capability' ? `L${n.level}` : 'APP'}</text>
-                  <text x={n.x + 12} y={n.y + 39} fill="#334155" fontSize="13">{n.name}</text>
-                </g>
-              )
-            })}
-          </g>
+            return (
+              <g
+                key={n.id}
+                onMouseDown={(e) => {
+                  const p = toSvgPoint(e.clientX, e.clientY)
+                  setDragging({ id: n.id, x: p.x, y: p.y })
+                  setSelectedId(n.id)
+                }}
+                style={{ cursor: dragging?.id === n.id ? 'grabbing' : 'grab' }}
+              >
+                <rect
+                  x={n.x}
+                  y={n.y}
+                  width={n.width}
+                  height={n.height}
+                  rx={14}
+                  fill={isSelected ? '#eff6ff' : '#ffffff'}
+                  stroke={isSelected ? '#0284c7' : '#cbd5e1'}
+                  strokeWidth={isSelected ? 2.2 : 1.4}
+                />
+
+                <text x={n.x + 12} y={n.y + 22} fill="#0f172a" fontSize="12" fontWeight="700">{`L${n.level}`}</text>
+                <text x={n.x + 12} y={n.y + 40} fill="#0f172a" fontSize="14" fontWeight="600">{n.name}</text>
+
+                {n.applications.map((app, idx) => {
+                  const row = Math.floor(idx / 2)
+                  const col = idx % 2
+                  const x = n.x + NODE_INNER_GAP + col * (appBoxWidth + NODE_INNER_GAP)
+                  const y = n.y + NODE_HEADER_HEIGHT + NODE_INNER_GAP + row * (APP_BOX_HEIGHT + 6)
+                  return (
+                    <g key={app.id}>
+                      <rect x={x} y={y} width={appBoxWidth} height={APP_BOX_HEIGHT} rx={8} fill="#f8fafc" stroke="#cbd5e1" strokeWidth={1} />
+                      <text x={x + 8} y={y + 16} fill="#334155" fontSize="11">{app.name}</text>
+                    </g>
+                  )
+                })}
+              </g>
+            )
+          })}
         </svg>
       </div>
 
       <aside className="rounded-xl border border-slate-200 bg-white p-4">
-        <h3 className="text-sm font-semibold text-slate-900">图谱节点详情</h3>
-        {!selectedDetail ? (
-          <p className="mt-2 text-sm text-slate-500">点击图中节点后，这里显示关联信息与快捷跳转。</p>
+        <h3 className="text-sm font-semibold text-slate-900">能力节点详情</h3>
+        {!selected ? (
+          <p className="mt-2 text-sm text-slate-500">点击/拖动图中能力节点后，这里显示详情。</p>
         ) : (
           <div className="mt-3 space-y-3">
-            <p className="text-sm font-medium text-slate-900">{selectedDetail.title}</p>
-            <Link href={selectedDetail.mainHref} className="inline-flex rounded bg-sky-100 px-2 py-1 text-xs text-sky-800 hover:bg-sky-200">{selectedDetail.mainLabel}</Link>
+            <p className="text-sm font-medium text-slate-900">{`L${selected.level} · ${selected.name}`}</p>
+            <Link href={`/capabilities/${selected.id}`} className="inline-flex rounded bg-sky-100 px-2 py-1 text-xs text-sky-800 hover:bg-sky-200">
+              打开能力详情
+            </Link>
             <div>
-              <p className="mb-1 text-xs text-slate-500">关联节点</p>
-              {selectedDetail.links.length === 0 ? (
+              <p className="mb-1 text-xs text-slate-500">实现应用</p>
+              {selected.applications.length === 0 ? (
                 <p className="text-sm text-slate-400">暂无</p>
               ) : (
                 <ul className="space-y-1">
-                  {selectedDetail.links.map((link) => (
-                    <li key={link.href}>
-                      <Link href={link.href} className="block rounded bg-slate-50 px-2 py-1 text-sm text-slate-700 hover:bg-slate-100">{link.label}</Link>
+                  {selected.applications.map((app) => (
+                    <li key={app.id}>
+                      <Link href={`/applications/${app.id}`} className="block rounded bg-slate-50 px-2 py-1 text-sm text-slate-700 hover:bg-slate-100">
+                        {app.name}
+                      </Link>
                     </li>
                   ))}
                 </ul>

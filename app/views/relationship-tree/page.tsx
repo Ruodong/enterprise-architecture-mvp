@@ -3,28 +3,22 @@ import { prisma } from '@/lib/prisma'
 import { CapabilityApplicationMindmap } from '@/components/capability-application-mindmap'
 
 export default async function RelationshipTreePage() {
-  const [capabilities, applications] = await Promise.all([
-    prisma.businessCapability.findMany({
-      select: {
-        id: true,
-        name: true,
-        level: true,
-        parentId: true,
-        appLinks: {
-          select: {
-            application: {
-              select: { id: true, name: true }
-            }
+  const capabilities = await prisma.businessCapability.findMany({
+    select: {
+      id: true,
+      name: true,
+      level: true,
+      parentId: true,
+      appLinks: {
+        select: {
+          application: {
+            select: { id: true, name: true }
           }
         }
-      },
-      orderBy: [{ level: 'asc' }, { name: 'asc' }]
-    }),
-    prisma.businessApplication.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' }
-    })
-  ])
+      }
+    },
+    orderBy: [{ level: 'asc' }, { name: 'asc' }]
+  })
 
   return (
     <div className="space-y-4">
@@ -41,7 +35,6 @@ export default async function RelationshipTreePage() {
           parentId: item.parentId,
           applications: item.appLinks.map((link) => ({ id: link.application.id, name: link.application.name }))
         }))}
-        applications={applications}
       />
     </div>
   )
