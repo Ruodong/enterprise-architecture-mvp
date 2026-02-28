@@ -88,7 +88,7 @@ export default async function RelationshipTreePage({
     capabilities = allCapabilities.filter((c) => keep.has(c.id))
   }
 
-  const [capOwners, appOwners] = await Promise.all([
+  const [capOwners, appOwners, capabilityNames, applicationNames] = await Promise.all([
     prisma.businessCapability.findMany({
       select: { owner: true },
       distinct: ['owner'],
@@ -100,6 +100,14 @@ export default async function RelationshipTreePage({
       distinct: ['owner'],
       where: { owner: { not: null } },
       orderBy: { owner: 'asc' }
+    }),
+    prisma.businessCapability.findMany({
+      select: { name: true },
+      orderBy: { name: 'asc' }
+    }),
+    prisma.businessApplication.findMany({
+      select: { name: true },
+      orderBy: { name: 'asc' }
     })
   ])
 
@@ -110,7 +118,7 @@ export default async function RelationshipTreePage({
         <p className="mt-1 text-sm text-slate-500">按业务能力属性或应用属性筛选图谱内容（能力、应用和连线都会同步过滤）。</p>
 
         <form className="mt-4 grid gap-3 md:grid-cols-3">
-          <input name="capQ" defaultValue={capQ} placeholder="筛选能力名称" className="mac-input" />
+          <input name="capQ" list="capability-name-options" defaultValue={capQ} placeholder="筛选能力名称" className="mac-input" />
           <select name="capOwner" defaultValue={capOwner} className="mac-input">
             <option value="">能力Owner（全部）</option>
             {capOwners.map((o) => (
@@ -125,7 +133,7 @@ export default async function RelationshipTreePage({
             <option value="RETIRED">RETIRED</option>
           </select>
 
-          <input name="appQ" defaultValue={appQ} placeholder="筛选应用名称" className="mac-input" />
+          <input name="appQ" list="application-name-options" defaultValue={appQ} placeholder="筛选应用名称" className="mac-input" />
           <select name="appOwner" defaultValue={appOwner} className="mac-input">
             <option value="">应用Owner（全部）</option>
             {appOwners.map((o) => (
@@ -150,6 +158,18 @@ export default async function RelationshipTreePage({
           <div className="md:col-span-3">
             <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">筛选</button>
           </div>
+
+          <datalist id="capability-name-options">
+            {capabilityNames.map((item) => (
+              <option key={item.name} value={item.name} />
+            ))}
+          </datalist>
+
+          <datalist id="application-name-options">
+            {applicationNames.map((item) => (
+              <option key={item.name} value={item.name} />
+            ))}
+          </datalist>
         </form>
       </Card>
 
