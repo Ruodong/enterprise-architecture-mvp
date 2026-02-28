@@ -312,7 +312,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 )
               })}
 
-              <circle cx={centerX} cy={centerY} r={10} fill="#ffffff" stroke="#cbd5e1" strokeWidth={1.2} />
+              <circle cx={centerX} cy={centerY} r={11} fill="#ffffff" stroke="#94a3b8" strokeWidth={2} />
 
               {nodes.map((n) => {
                 const appBoxWidth = (NODE_WIDTH - NODE_INNER_GAP * 3) / 2
@@ -347,7 +347,14 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                     <text x={n.x + 12} y={n.y + 40} fill="#0f172a" fontSize="14" fontWeight="600">{n.name}</text>
 
                     {canToggle && hasChildren ? (
-                      <g onClick={() => toggleCollapse(n.id)}>
+                      <g
+                        style={{ cursor: 'pointer' }}
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          toggleCollapse(n.id)
+                        }}
+                      >
                         <rect
                           data-role="collapse"
                           x={n.x + n.width - 28}
