@@ -449,7 +449,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 onClick={() => handleDomainButtonClick(group)}
                 className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5"
                 style={{
-                  borderColor: highlightMultiApps && multiAppDomainSet.has(group) ? '#dc2626' : isMuted ? p.mutedStroke : p.stroke,
+                  borderColor: highlightMultiApps && !isMuted && multiAppDomainSet.has(group) ? '#dc2626' : isMuted ? p.mutedStroke : p.stroke,
                   background: isMuted ? p.mutedFill : p.fill,
                   color: isMuted ? p.mutedText : p.text
                 }}
@@ -573,7 +573,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 const appBoxWidth = (NODE_WIDTH - NODE_INNER_GAP * 3) / 2
                 const isSelected = selectedId === n.id
                 const isMutedNode = nodeMutedMap.get(n.id)
-                const nodeMultiEligible = highlightMultiApps && (n.level === 2 || n.level === 3) && (n.appCount ?? n.applications.length) > 1
+                const nodeMultiEligible = highlightMultiApps && !isMutedNode && (n.level === 2 || n.level === 3) && (n.appCount ?? n.applications.length) > 1
                 const canToggle = n.level === 1 || n.level === 2
                 const hasChildren = (byParent.get(n.id)?.length ?? 0) > 0
                 const isCollapsed = collapsed.has(n.id)
