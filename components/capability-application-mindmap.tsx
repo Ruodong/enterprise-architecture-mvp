@@ -90,13 +90,11 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
 
 export function CapabilityApplicationMindmap({ capabilities }: { capabilities: CapNode[] }) {
   const svgRef = useRef<SVGSVGElement | null>(null)
-  const containerRef = useRef<HTMLDivElement | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [dragging, setDragging] = useState<{ id: string; x: number; y: number } | null>(null)
   const [scale, setScale] = useState(1)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-  const [sideWidth, setSideWidth] = useState(320)
-  const [resizingPanel, setResizingPanel] = useState(false)
+  const [detailHidden, setDetailHidden] = useState(false)
 
   const byParent = useMemo(() => {
     const map = new Map<string, CapNode[]>()
@@ -232,20 +230,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="flex gap-3"
-      onMouseMove={(e) => {
-        if (!resizingPanel) return
-        const rect = containerRef.current?.getBoundingClientRect()
-        if (!rect) return
-        const next = Math.min(520, Math.max(240, rect.right - e.clientX))
-        setSideWidth(next)
-      }}
-      onMouseUp={() => setResizingPanel(false)}
-      onMouseLeave={() => setResizingPanel(false)}
-    >
-      <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white p-3">
+    <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+      <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3">
         <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
           <span>Lenovo Business Capability Map · 支持缩放、拖拽，L1/L2 节点可折叠下级。</span>
           <button onClick={() => void resetToLenovoMap()} className="rounded bg-slate-100 px-2 py-1 text-slate-700 hover:bg-slate-200">重置布局</button>
@@ -418,41 +404,46 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
         </div>
       </div>
 
-      <div
-        onMouseDown={() => setResizingPanel(true)}
-        className="w-1.5 cursor-col-resize rounded bg-slate-200/80 hover:bg-sky-300"
-        title="拖动调整右侧详情宽度"
-      />
+      <div className="space-y-2">
+        <button
+          onClick={() => setDetailHidden((v) => !v)}
+          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+        >
+          {detailHidden ? '显示能力节点详情' : '隐藏能力节点详情'}
+        </button>
 
-      <aside className="shrink-0 rounded-xl border border-slate-200 bg-white p-4" style={{ width: `${sideWidth}px` }}>
-        <h3 className="text-sm font-semibold text-slate-900">能力节点详情</h3>
-        {!selected ? (
-          <p className="mt-2 text-sm text-slate-500">点击/拖动图中能力节点后，这里显示详情。</p>
-        ) : (
-          <div className="mt-3 space-y-3">
-            <p className="text-sm font-medium text-slate-900">{`L${selected.level} · ${selected.name}`}</p>
-            <Link href={`/capabilities/${selected.id}`} className="inline-flex rounded bg-sky-100 px-2 py-1 text-xs text-sky-800 hover:bg-sky-200">
-              打开能力详情
-            </Link>
-            <div>
-              <p className="mb-1 text-xs text-slate-500">实现应用</p>
-              {selected.applications.length === 0 ? (
-                <p className="text-sm text-slate-400">暂无</p>
-              ) : (
-                <ul className="space-y-1">
-                  {selected.applications.map((app) => (
-                    <li key={app.id}>
-                      <Link href={`/applications/${app.id}`} className="block rounded bg-slate-50 px-2 py-1 text-sm text-slate-700 hover:bg-slate-100">
-                        {app.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        )}
-      </aside>
+        {!detailHidden ? (
+          <aside className="w-[320px] rounded-xl border border-slate-200 bg-white p-4">
+            <h3 className="text-sm font-semibold text-slate-900">能力节点详情</h3>
+            {!selected ? (
+              <p className="mt-2 text-sm text-slate-500">点击/拖动图中能力节点后，这里显示详情。</p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                <p className="text-sm font-medium text-slate-900">{`L${selected.level} · ${selected.name}`}</p>
+                <Link href={`/capabilities/${selected.id}`} className="inline-flex rounded bg-sky-100 px-2 py-1 text-xs text-sky-800 hover:bg-sky-200">
+                  打开能力详情
+                </Link>
+                <div>
+                  <p className="mb-1 text-xs text-slate-500">实现应用</p>
+                  {selected.applications.length === 0 ? (
+                    <p className="text-sm text-slate-400">暂无</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {selected.applications.map((app) => (
+                        <li key={app.id}>
+                          <Link href={`/applications/${app.id}`} className="block rounded bg-slate-50 px-2 py-1 text-sm text-slate-700 hover:bg-slate-100">
+                            {app.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </aside>
+        ) : null}
+      </div>
     </div>
   )
 }
