@@ -18,11 +18,13 @@ type Position = { x: number; y: number }
 
 const VIEWBOX_WIDTH = 1900
 const VIEWBOX_HEIGHT = 1200
-const MIN_NODE_WIDTH = 360
-const MAX_NODE_WIDTH = 640
+const MIN_NODE_WIDTH = 300
+const MAX_NODE_WIDTH = 760
 const APP_BOX_HEIGHT = 36
 const APP_BOX_GAP = 12
-const NODE_INNER_GAP = 10
+const NODE_INNER_GAP = 14
+const TITLE_FONT_SIZE = 16
+const APP_FONT_SIZE = 14
 
 const appGroupPalette: Record<string, { fill: string; stroke: string; text: string; mutedFill: string; mutedStroke: string; mutedText: string }> = {
   销售域: { fill: '#bfdbfe', stroke: '#1e3a8a', text: '#0a0a0a', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
@@ -44,26 +46,37 @@ function getAppGroup(name: string) {
   return '其他'
 }
 
-function fitAppLabel(name: string, maxChars = 8) {
-  return name.length > maxChars ? `${name.slice(0, maxChars)}…` : name
-}
-
 function estimateTextWidth(text: string, fontSize = 14) {
   return text.length * fontSize * 0.56
 }
 
-function nodeWidth(cap: CapNode) {
-  const appNameMax = cap.applications.reduce((m, a) => Math.max(m, a.name.length), 8)
-  const byTitle = estimateTextWidth(cap.name, 16) + 80
-  const byApps = estimateTextWidth('字'.repeat(appNameMax), 14) * 2 + 140
-  return Math.max(MIN_NODE_WIDTH, Math.min(MAX_NODE_WIDTH, Math.max(byTitle, byApps)))
+function appBoxWidth(name: string) {
+  const w = estimateTextWidth(name, APP_FONT_SIZE) + 28
+  return Math.max(120, Math.min(320, w))
+}
+
+function splitRows<T>(arr: T[]) {
+  const rows: T[][] = []
+  for (let i = 0; i < arr.length; i += 2) rows.push(arr.slice(i, i + 2))
+  return rows.length ? rows : [[]]
 }
 
 function nodeMetrics(cap: CapNode) {
-  const width = nodeWidth(cap)
-  const rows = Math.max(1, Math.ceil(cap.applications.length / 2))
-  const appAreaHeight = rows * APP_BOX_HEIGHT + (rows - 1) * 8 + 16
-  const headerHeight = Math.max(42, Math.round(appAreaHeight * 0.28))
+  const title = `L${cap.level} · ${cap.name}`
+  const titleWidth = estimateTextWidth(title, TITLE_FONT_SIZE) + NODE_INNER_GAP * 2
+
+  const rows = splitRows(cap.applications)
+  const rowWidths = rows.map((row) => {
+    if (row.length === 0) return 0
+    if (row.length === 1) return appBoxWidth(row[0].name)
+    return appBoxWidth(row[0].name) + APP_BOX_GAP + appBoxWidth(row[1].name)
+  })
+  const appBandWidth = Math.max(220, ...rowWidths)
+
+  const width = Math.max(MIN_NODE_WIDTH, Math.min(MAX_NODE_WIDTH, Math.max(titleWidth, appBandWidth + NODE_INNER_GAP * 2)))
+  const appRows = Math.max(1, rows.length)
+  const headerHeight = 52
+  const appAreaHeight = appRows * APP_BOX_HEIGHT + (appRows - 1) * 10 + 16
   const height = headerHeight + appAreaHeight
   return { width, height, headerHeight }
 }
@@ -589,13 +602,11 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
               <circle cx={centerX} cy={centerY} r={11} fill="#ffffff" stroke="#111827" strokeWidth={2.2} />
 
               {nodes.map((n) => {
-                const appRegionWidth = n.width * 0.8
-                const appRegionX = n.x + (n.width - appRegionWidth) / 2
-                const appBoxWidth = (appRegionWidth - APP_BOX_GAP) / 2
                 const isSelected = selectedId === n.id
                 const isMutedNode = nodeMutedMap.get(n.id)
                 const nodeMultiEligible = highlightMultiApps && !isMutedNode && (n.level === 2 || n.level === 3) && (n.appCount ?? n.applications.length) > 1
                 const canToggle = n.level === 1 || n.level === 2
+                const appRows = splitRows(n.applications)
                 const hasChildren = (byParent.get(n.id)?.length ?? 0) > 0
                 const isCollapsed = collapsed.has(n.id)
 
@@ -623,8 +634,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                       stroke={isSelected ? '#000000' : nodeMultiEligible ? '#dc2626' : isMutedNode ? '#e2e8f0' : '#111827'}
                       strokeWidth={isSelected ? 2.8 : nodeMultiEligible ? 2.4 : 1.8}
                     />
-                    <text x={n.x + 12} y={n.y + 22} fill={isMutedNode ? '#94a3b8' : '#111827'} fontSize="12" fontWeight="700">{`L${n.level}`}</text>
-                    <text x={n.x + 12} y={n.y + 40} fill={isMutedNode ? '#94a3b8' : '#111827'} fontSize="14" fontWeight="600">{n.name}</text>
+                    <text x={n.x + 12} y={n.y + 30} fill={isMutedNode ? '#94a3b8' : '#111827'} fontSize={TITLE_FONT_SIZE} fontWeight="700">{`L${n.level} · ${n.name}`}</text>
 
                     {canToggle && hasChildren ? (
                       <g style={{ cursor: 'pointer' }} data-role="collapse-group">
@@ -661,31 +671,40 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                       </g>
                     ) : null}
 
-                    {n.applications.map((app, idx) => {
-                      const row = Math.floor(idx / 2)
-                      const col = idx % 2
-                      const x = appRegionX + col * (appBoxWidth + APP_BOX_GAP)
-                      const y = n.y + n.headerHeight + 8 + row * (APP_BOX_HEIGHT + 8)
-                      const group = getAppGroup(app.name)
-                      const palette = appGroupPalette[group] ?? appGroupPalette['其他']
-                      const domainMuted = group !== '其他' && mutedDomains.has(group)
-                      const emphasize = nodeMultiEligible
-                      return (
-                        <g key={app.id}>
-                          <rect
-                            x={x}
-                            y={y}
-                            width={appBoxWidth}
-                            height={APP_BOX_HEIGHT}
-                            rx={8}
-                            fill={domainMuted ? palette.mutedFill : palette.fill}
-                            stroke={emphasize ? '#dc2626' : domainMuted ? palette.mutedStroke : '#111827'}
-                            strokeWidth={emphasize ? 2.4 : 1.4}
-                          />
-                          <text x={x + appBoxWidth / 2} y={y + 24} textAnchor="middle" fill={domainMuted ? palette.mutedText : '#0a0a0a'} fontSize="14">{fitAppLabel(app.name)}</text>
-                          <title>{app.name}</title>
-                        </g>
-                      )
+                    {appRows.map((rowApps, rowIdx) => {
+                      const widths = rowApps.map((app) => appBoxWidth(app.name))
+                      const rowWidth = widths.reduce((s, w) => s + w, 0) + (rowApps.length > 1 ? APP_BOX_GAP : 0)
+                      const startX = n.x + (n.width - rowWidth) / 2
+                      const y = n.y + n.headerHeight + 8 + rowIdx * (APP_BOX_HEIGHT + 10)
+
+                      let cursorX = startX
+                      return rowApps.map((app, idx) => {
+                        const boxW = widths[idx]
+                        const x = cursorX
+                        cursorX += boxW + APP_BOX_GAP
+
+                        const group = getAppGroup(app.name)
+                        const palette = appGroupPalette[group] ?? appGroupPalette['其他']
+                        const domainMuted = group !== '其他' && mutedDomains.has(group)
+                        const emphasize = nodeMultiEligible
+
+                        return (
+                          <g key={app.id}>
+                            <rect
+                              x={x}
+                              y={y}
+                              width={boxW}
+                              height={APP_BOX_HEIGHT}
+                              rx={8}
+                              fill={domainMuted ? palette.mutedFill : palette.fill}
+                              stroke={emphasize ? '#dc2626' : domainMuted ? palette.mutedStroke : '#111827'}
+                              strokeWidth={emphasize ? 2.4 : 1.4}
+                            />
+                            <text x={x + boxW / 2} y={y + 24} textAnchor="middle" fill={domainMuted ? palette.mutedText : '#0a0a0a'} fontSize={APP_FONT_SIZE}>{app.name}</text>
+                            <title>{app.name}</title>
+                          </g>
+                        )
+                      })
                     })}
                   </g>
                 )
