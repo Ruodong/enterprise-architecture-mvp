@@ -20,7 +20,7 @@ const VIEWBOX_WIDTH = 1600
 const VIEWBOX_HEIGHT = 1080
 const NODE_WIDTH = 300
 const NODE_HEADER_HEIGHT = 54
-const APP_BOX_HEIGHT = 24
+const APP_BOX_HEIGHT = 28
 const APP_BOX_GAP = 8
 const NODE_INNER_GAP = 10
 
@@ -456,7 +456,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                             stroke={emphasize ? '#dc2626' : palette.stroke}
                             strokeWidth={emphasize ? 2.4 : 1}
                           />
-                          <text x={x + 8} y={y + 17} fill={palette.text} fontSize="13">{app.name}</text>
+                          <text x={x + 8} y={y + 19} fill={palette.text} fontSize="14">{app.name}</text>
                         </g>
                       )
                     })}
