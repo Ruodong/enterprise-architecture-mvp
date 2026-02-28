@@ -24,12 +24,12 @@ const APP_BOX_GAP = 8
 const NODE_INNER_GAP = 10
 
 const appGroupPalette: Record<string, { fill: string; stroke: string; text: string }> = {
-  销售域: { fill: '#eff6ff', stroke: '#93c5fd', text: '#1d4ed8' },
-  供应链域: { fill: '#ecfeff', stroke: '#67e8f9', text: '#0e7490' },
-  财务域: { fill: '#f5f3ff', stroke: '#c4b5fd', text: '#6d28d9' },
-  人力域: { fill: '#fff7ed', stroke: '#fdba74', text: '#c2410c' },
-  平台域: { fill: '#ecfdf5', stroke: '#86efac', text: '#15803d' },
-  其他: { fill: '#f8fafc', stroke: '#cbd5e1', text: '#334155' }
+  销售域: { fill: '#dbeafe', stroke: '#60a5fa', text: '#111827' },
+  供应链域: { fill: '#cffafe', stroke: '#22d3ee', text: '#111827' },
+  财务域: { fill: '#ede9fe', stroke: '#a78bfa', text: '#111827' },
+  人力域: { fill: '#ffedd5', stroke: '#fb923c', text: '#111827' },
+  平台域: { fill: '#dcfce7', stroke: '#4ade80', text: '#111827' },
+  其他: { fill: '#e2e8f0', stroke: '#94a3b8', text: '#111827' }
 }
 
 function getAppGroup(name: string) {
