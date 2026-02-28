@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { GitBranch, Star } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 type CapNode = {
@@ -113,10 +114,54 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
   return positions
 }
 
+function autoTreePositions(capabilities: CapNode[]): Record<string, Position> {
+  const levelX: Record<number, number> = { 1: 280, 2: 760, 3: 1240 }
+  const verticalGap = 36
+  const byParent = new Map<string, CapNode[]>()
+  capabilities.forEach((c) => {
+    if (!c.parentId) return
+    const list = byParent.get(c.parentId) ?? []
+    list.push(c)
+    byParent.set(c.parentId, list)
+  })
+  byParent.forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN')))
+
+  const roots = capabilities.filter((c) => !c.parentId).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+  const positions: Record<string, Position> = {}
+  let cursorY = 120
+
+  const layout = (node: CapNode): number => {
+    const children = byParent.get(node.id) ?? []
+    const h = nodeHeight(node.applications.length)
+
+    if (children.length === 0) {
+      const centerY = cursorY + h / 2
+      positions[node.id] = { x: (levelX[node.level] ?? 1240) - NODE_WIDTH / 2, y: centerY - h / 2 }
+      cursorY += h + verticalGap
+      return centerY
+    }
+
+    const childCenters = children.map((child) => layout(child))
+    const minY = Math.min(...childCenters)
+    const maxY = Math.max(...childCenters)
+    const centerY = (minY + maxY) / 2
+    positions[node.id] = { x: (levelX[node.level] ?? 1240) - NODE_WIDTH / 2, y: centerY - h / 2 }
+    return centerY
+  }
+
+  roots.forEach((root) => {
+    layout(root)
+    cursorY += 24
+  })
+
+  return positions
+}
+
 export function CapabilityApplicationMindmap({ capabilities }: { capabilities: CapNode[] }) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [dragging, setDragging] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [layoutMode, setLayoutMode] = useState<'star' | 'tree'>('star')
   const [scale, setScale] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [canvasDragging, setCanvasDragging] = useState<{ x: number; y: number } | null>(null)
@@ -145,19 +190,12 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     return map
   }, [capabilities])
 
-  const autoLayout = useMemo(() => autoRadialPositions(capabilities), [capabilities])
+  const autoLayout = useMemo(
+    () => (layoutMode === 'star' ? autoRadialPositions(capabilities) : autoTreePositions(capabilities)),
+    [capabilities, layoutMode]
+  )
 
-  const persistedPositions = useMemo<Record<string, Position>>(() => {
-    const merged: Record<string, Position> = { ...autoLayout }
-    capabilities.forEach((cap) => {
-      if (typeof cap.diagramX === 'number' && typeof cap.diagramY === 'number') {
-        merged[cap.id] = { x: cap.diagramX, y: cap.diagramY }
-      }
-    })
-    return merged
-  }, [autoLayout, capabilities])
-
-  const [positions, setPositions] = useState<Record<string, Position>>(persistedPositions)
+  const [positions, setPositions] = useState<Record<string, Position>>(autoLayout)
 
   const visibility = useMemo(() => {
     const hidden = new Set<string>()
@@ -199,7 +237,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
 
   const selected = selectedId ? nodes.find((n) => n.id === selectedId) ?? null : null
 
-  const centerX = VIEWBOX_WIDTH / 2
+  const centerX = layoutMode === 'star' ? VIEWBOX_WIDTH / 2 : 80
   const centerY = VIEWBOX_HEIGHT / 2
 
   const toSvgPoint = (clientX: number, clientY: number) => {
@@ -228,13 +266,15 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     }
   }
 
-  const resetToLenovoMap = async () => {
-    setPositions(autoLayout)
+  const applyLayout = async (mode: 'star' | 'tree') => {
+    setLayoutMode(mode)
+    const nextLayout = mode === 'star' ? autoRadialPositions(capabilities) : autoTreePositions(capabilities)
+    setPositions(nextLayout)
     setScale(1)
     setPan({ x: 0, y: 0 })
     await Promise.all(
       capabilities.map((c) => {
-        const p = autoLayout[c.id]
+        const p = nextLayout[c.id]
         return fetch('/api/capability-positions', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -294,8 +334,25 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
       <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3">
         <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
-          <span>Lenovo Business Capability Map · 支持缩放、拖拽，L1/L2 节点可折叠下级。</span>
-          <button onClick={() => void resetToLenovoMap()} className="rounded bg-slate-100 px-2 py-1 text-slate-700 hover:bg-slate-200">重置布局</button>
+          <span>Lenovo Business Capability Map · 支持拖拽，L1/L2 节点可折叠下级。</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => void applyLayout('star')}
+              className={`inline-flex h-7 w-7 items-center justify-center rounded border ${layoutMode === 'star' ? 'border-sky-300 bg-sky-100 text-sky-700' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'}`}
+              title="星型布局"
+            >
+              <Star className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => void applyLayout('tree')}
+              className={`inline-flex h-7 w-7 items-center justify-center rounded border ${layoutMode === 'tree' ? 'border-sky-300 bg-sky-100 text-sky-700' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'}`}
+              title="树形布局"
+            >
+              <GitBranch className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
         <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
           {DOMAIN_GROUPS.map((group) => {
