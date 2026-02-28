@@ -272,14 +272,14 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 {group}
               </span>
             ))}
-          <label className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[11px] text-slate-700">
+          <label className="ml-auto inline-flex items-center gap-1.5 px-1 py-0.5 text-[11px] text-slate-700">
             <input
               type="checkbox"
               checked={highlightMultiApps}
               onChange={(e) => setHighlightMultiApps(e.target.checked)}
               className="h-3.5 w-3.5 rounded border-slate-300"
             />
-            同一L3下多应用红框高亮
+            L2/L3业务能力多应用
           </label>
         </div>
 
