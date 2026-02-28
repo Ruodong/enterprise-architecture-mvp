@@ -364,7 +364,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                     key={n.id}
                     onMouseDown={(e) => {
                       const target = e.target as SVGElement
-                      if (target.dataset.role === 'collapse') return
+                      const role = target.dataset.role || target.parentElement?.getAttribute('data-role') || ''
+                      if (role.startsWith('collapse')) return
                       const p = toSvgPoint(e.clientX, e.clientY)
                       setDragging({ id: n.id, x: p.x, y: p.y })
                       setSelectedId(n.id)
@@ -385,16 +386,9 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                     <text x={n.x + 12} y={n.y + 40} fill="#0f172a" fontSize="14" fontWeight="600">{n.name}</text>
 
                     {canToggle && hasChildren ? (
-                      <g
-                        style={{ cursor: 'pointer' }}
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          toggleCollapse(n.id)
-                        }}
-                      >
+                      <g style={{ cursor: 'pointer' }} data-role="collapse-group">
                         <rect
-                          data-role="collapse"
+                          data-role="collapse-rect"
                           x={n.x + n.width - 28}
                           y={n.y + 10}
                           width={18}
@@ -402,15 +396,24 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                           rx={6}
                           fill="#f1f5f9"
                           stroke="#cbd5e1"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            toggleCollapse(n.id)
+                          }}
                         />
                         <text
-                          data-role="collapse"
+                          data-role="collapse-text"
                           x={n.x + n.width - 19}
                           y={n.y + 23}
                           textAnchor="middle"
                           fontSize="14"
                           fill="#334155"
-                          style={{ pointerEvents: 'none' }}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            toggleCollapse(n.id)
+                          }}
                         >
                           {isCollapsed ? '+' : '-'}
                         </text>
