@@ -47,16 +47,16 @@ function getAppGroup(name: string) {
 }
 
 function estimateTextWidth(text: string, fontSize = 14) {
-  // 中文按全角近似，英文/数字按半角近似，避免长中文被低估导致压边
+  // 稍微放大估算，避免长中英文混排时文字压边
   const cjk = (text.match(/[\u4e00-\u9fff]/g) || []).length
   const other = text.length - cjk
-  const units = cjk * 1 + other * 0.62
+  const units = cjk * 1.05 + other * 0.75
   return units * fontSize
 }
 
 function appBoxWidth(name: string) {
-  const w = estimateTextWidth(name, APP_FONT_SIZE) + 36
-  return Math.max(110, Math.min(420, w))
+  const w = estimateTextWidth(name, APP_FONT_SIZE) + 44
+  return Math.max(120, Math.min(520, w))
 }
 
 function splitRows<T>(arr: T[]) {
@@ -222,6 +222,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   const [scale, setScale] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [canvasDragging, setCanvasDragging] = useState<{ x: number; y: number } | null>(null)
+  const [centerPos, setCenterPos] = useState<{ x: number; y: number }>({ x: VIEWBOX_WIDTH / 2, y: VIEWBOX_HEIGHT / 2 })
+  const [centerDragging, setCenterDragging] = useState<{ x: number; y: number } | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [detailHidden, setDetailHidden] = useState(false)
   const [highlightMultiApps, setHighlightMultiApps] = useState(false)
@@ -237,6 +239,10 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   useEffect(() => {
     localStorage.setItem('ea.detailHidden', detailHidden ? '1' : '0')
   }, [detailHidden])
+
+  useEffect(() => {
+    setCenterPos({ x: layoutMode === 'star' ? VIEWBOX_WIDTH / 2 : 80, y: VIEWBOX_HEIGHT / 2 })
+  }, [layoutMode])
 
   const byParent = useMemo(() => {
     const map = new Map<string, CapNode[]>()
@@ -305,8 +311,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
 
   const selected = selectedId ? nodes.find((n) => n.id === selectedId) ?? null : null
 
-  const centerX = layoutMode === 'star' ? VIEWBOX_WIDTH / 2 : 80
-  const centerY = VIEWBOX_HEIGHT / 2
+  const centerX = centerPos.x
+  const centerY = centerPos.y
 
   const toSvgPoint = (clientX: number, clientY: number) => {
     const svg = svgRef.current
@@ -340,6 +346,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     setPositions(nextLayout)
     setScale(1)
     setPan({ x: 0, y: 0 })
+    setCenterPos({ x: mode === 'star' ? VIEWBOX_WIDTH / 2 : 80, y: VIEWBOX_HEIGHT / 2 })
     await Promise.all(
       capabilities.map((c) => {
         const p = nextLayout[c.id]
@@ -518,6 +525,13 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
               setCanvasDragging({ x: e.clientX, y: e.clientY })
             }}
             onMouseMove={(e) => {
+              if (centerDragging) {
+                const p = toSvgPoint(e.clientX, e.clientY)
+                setCenterPos((prev) => ({ x: prev.x + (p.x - centerDragging.x), y: prev.y + (p.y - centerDragging.y) }))
+                setCenterDragging({ x: p.x, y: p.y })
+                return
+              }
+
               if (dragging) {
                 const p = toSvgPoint(e.clientX, e.clientY)
                 const dx = p.x - dragging.x
@@ -543,11 +557,13 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
             onMouseUp={() => {
               if (dragging?.id) void savePosition(dragging.id)
               setDragging(null)
+              setCenterDragging(null)
               setCanvasDragging(null)
             }}
             onMouseLeave={() => {
               if (dragging?.id) void savePosition(dragging.id)
               setDragging(null)
+              setCenterDragging(null)
               setCanvasDragging(null)
             }}
           >
@@ -604,7 +620,20 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 )
               })}
 
-              <circle cx={centerX} cy={centerY} r={11} fill="#ffffff" stroke="#111827" strokeWidth={2.2} />
+              <circle
+                cx={centerX}
+                cy={centerY}
+                r={11}
+                fill="#ffffff"
+                stroke="#111827"
+                strokeWidth={2.2}
+                style={{ cursor: 'grab' }}
+                onMouseDown={(e) => {
+                  e.stopPropagation()
+                  const p = toSvgPoint(e.clientX, e.clientY)
+                  setCenterDragging({ x: p.x, y: p.y })
+                }}
+              />
 
               {nodes.map((n) => {
                 const isSelected = selectedId === n.id
