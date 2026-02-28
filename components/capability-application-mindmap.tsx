@@ -16,12 +16,12 @@ type CapNode = {
 
 type Position = { x: number; y: number }
 
-const VIEWBOX_WIDTH = 2200
-const VIEWBOX_HEIGHT = 1400
-const NODE_WIDTH = 300
-const NODE_HEADER_HEIGHT = 54
-const APP_BOX_HEIGHT = 28
-const APP_BOX_GAP = 8
+const VIEWBOX_WIDTH = 1900
+const VIEWBOX_HEIGHT = 1200
+const NODE_WIDTH = 360
+const NODE_HEADER_HEIGHT = 60
+const APP_BOX_HEIGHT = 32
+const APP_BOX_GAP = 10
 const NODE_INNER_GAP = 10
 
 const appGroupPalette: Record<string, { fill: string; stroke: string; text: string; mutedFill: string; mutedStroke: string; mutedText: string }> = {
@@ -81,9 +81,9 @@ function nudgePoint(ax: number, ay: number, tx: number, ty: number, d = 2) {
 function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> {
   const centerX = VIEWBOX_WIDTH / 2
   const centerY = VIEWBOX_HEIGHT / 2
-  const r1 = 320
-  const r2 = 700
-  const r3 = 1020
+  const r1 = 260
+  const r2 = 520
+  const r3 = 760
 
   const l1 = capabilities.filter((c) => c.level === 1).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
   const byParent = new Map<string, CapNode[]>()
@@ -135,7 +135,7 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
 }
 
 function autoTreePositions(capabilities: CapNode[]): Record<string, Position> {
-  const levelX: Record<number, number> = { 1: 280, 2: 760, 3: 1240 }
+  const levelX: Record<number, number> = { 1: 240, 2: 680, 3: 1120 }
   const verticalGap = 36
   const byParent = new Map<string, CapNode[]>()
   capabilities.forEach((c) => {
@@ -389,15 +389,6 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     nodeMutedMap.set(n.id, muted)
   })
 
-  const multiAppDomainSet = new Set<string>()
-  nodes.forEach((n) => {
-    const isMulti = (n.level === 2 || n.level === 3) && (n.appCount ?? n.applications.length) > 1
-    if (!isMulti) return
-    n.applications.forEach((a) => {
-      const g = getAppGroup(a.name)
-      if (g !== '其他') multiAppDomainSet.add(g)
-    })
-  })
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
@@ -449,7 +440,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 onClick={() => handleDomainButtonClick(group)}
                 className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5"
                 style={{
-                  borderColor: highlightMultiApps && !isMuted && multiAppDomainSet.has(group) ? '#dc2626' : isMuted ? p.mutedStroke : p.stroke,
+                  borderColor: isMuted ? p.mutedStroke : p.stroke,
                   background: isMuted ? p.mutedFill : p.fill,
                   color: isMuted ? p.mutedText : p.text
                 }}
@@ -661,7 +652,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                             stroke={emphasize ? '#dc2626' : domainMuted ? palette.mutedStroke : palette.stroke}
                             strokeWidth={emphasize ? 2.4 : 1}
                           />
-                          <text x={x + appBoxWidth / 2} y={y + 19} textAnchor="middle" fill={domainMuted ? palette.mutedText : palette.text} fontSize="14">{fitAppLabel(app.name)}</text>
+                          <text x={x + appBoxWidth / 2} y={y + 22} textAnchor="middle" fill={domainMuted ? palette.mutedText : palette.text} fontSize="14">{fitAppLabel(app.name)}</text>
                           <title>{app.name}</title>
                         </g>
                       )
