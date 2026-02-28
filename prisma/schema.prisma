@@ -19,6 +19,8 @@ model BusinessCapability {
   name            String   @unique
   description     String?
   owner           String?
+  level           Int      @default(1)
+  parentId        String?
   lifecycleStatus LifecycleStatus @default(ACTIVE)
   validFrom       DateTime?
   validTo         DateTime?
@@ -26,10 +28,14 @@ model BusinessCapability {
   updatedAt       DateTime @updatedAt
   deletedAt       DateTime?
 
+  parent          BusinessCapability?  @relation("CapabilityHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children        BusinessCapability[] @relation("CapabilityHierarchy")
   appLinks        ApplicationCapability[]
 
   @@index([lifecycleStatus])
   @@index([deletedAt])
+  @@index([parentId])
+  @@index([level])
 }
 
 model BusinessApplication {

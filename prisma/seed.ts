@@ -3,7 +3,6 @@ import { LifecycleStatus, PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  // 清空旧数据（包含之前的扩展数据）
   await prisma.applicationCapability.deleteMany()
   await prisma.applicationTechStack.deleteMany()
   await prisma.applicationTechPlatform.deleteMany()
@@ -12,28 +11,67 @@ async function main() {
   await prisma.techStack.deleteMany()
   await prisma.techPlatform.deleteMany()
 
-  // 业务能力（有实际含义）
-  const capabilities = await prisma.businessCapability.createManyAndReturn({
-    data: [
-      { name: '客户主数据管理', description: '统一客户档案、分层和标签管理', owner: '客户运营中心', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '线索到商机转化', description: '线索分配、培育、商机推进', owner: '销售管理部', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '报价与合同管理', description: '报价审批、合同模板、签署归档', owner: '销售管理部', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '订单履约协同', description: '订单下发、库存占用、物流协同', owner: '供应链运营部', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '采购与供应商管理', description: '采购申请、询比价、供应商绩效', owner: '采购中心', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '财务总账与应收应付', description: '总账核算、应收应付、关账报表', owner: '财务部', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '预算与经营分析', description: '预算编制、滚动预测、经营看板', owner: '财务BP团队', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '人力资源主数据', description: '组织、岗位、员工主数据维护', owner: '人力资源部', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '招聘与入离职管理', description: '招聘流程、入职手续、离职交接', owner: '人力资源部', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '身份与访问控制', description: '统一认证、角色授权、单点登录', owner: '信息安全部', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: 'API治理与集成编排', description: '系统集成、接口网关、流程编排', owner: '企业架构组', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '数据治理与主数据服务', description: '数据标准、血缘、质量监控', owner: '数据治理委员会', lifecycleStatus: LifecycleStatus.PLANNED },
-      { name: '数据仓库与BI报表', description: '主题建模、指标口径、管理驾驶舱', owner: '数据平台团队', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '监控告警与可观测性', description: '日志、指标、链路追踪和告警', owner: 'SRE团队', lifecycleStatus: LifecycleStatus.ACTIVE },
-      { name: '变更发布与配置管理', description: '发布流程、配置审计、回滚机制', owner: '运维平台团队', lifecycleStatus: LifecycleStatus.ACTIVE }
-    ]
-  })
+  const capabilityDefs = [
+    { name: '市场与销售管理', level: 1, owner: '销售管理部' },
+    { name: '供应链与履约管理', level: 1, owner: '供应链运营部' },
+    { name: '财务与经营管理', level: 1, owner: '财务部' },
+    { name: '人力与组织管理', level: 1, owner: '人力资源部' },
+    { name: '企业平台与治理', level: 1, owner: '企业架构组' },
 
-  // 技术栈（有实际含义）
+    { name: '客户经营', level: 2, parent: '市场与销售管理', owner: '客户运营中心' },
+    { name: '交易管理', level: 2, parent: '市场与销售管理', owner: '销售管理部' },
+    { name: '采购与供应商协同', level: 2, parent: '供应链与履约管理', owner: '采购中心' },
+    { name: '订单履约', level: 2, parent: '供应链与履约管理', owner: '供应链运营部' },
+    { name: '核算与经营分析', level: 2, parent: '财务与经营管理', owner: '财务BP团队' },
+    { name: '组织人事管理', level: 2, parent: '人力与组织管理', owner: '人力资源部' },
+    { name: '集成与数据治理', level: 2, parent: '企业平台与治理', owner: '数据平台团队' },
+    { name: '安全与运维保障', level: 2, parent: '企业平台与治理', owner: '信息安全部' },
+
+    { name: '客户主数据管理', level: 3, parent: '客户经营', owner: '客户运营中心' },
+    { name: '线索到商机转化', level: 3, parent: '交易管理', owner: '销售管理部' },
+    { name: '报价与合同管理', level: 3, parent: '交易管理', owner: '销售管理部' },
+    { name: '采购与供应商管理', level: 3, parent: '采购与供应商协同', owner: '采购中心' },
+    { name: '订单履约协同', level: 3, parent: '订单履约', owner: '供应链运营部' },
+    { name: '财务总账与应收应付', level: 3, parent: '核算与经营分析', owner: '财务部' },
+    { name: '预算与经营分析', level: 3, parent: '核算与经营分析', owner: '财务BP团队' },
+    { name: '人力资源主数据', level: 3, parent: '组织人事管理', owner: '人力资源部' },
+    { name: '招聘与入离职管理', level: 3, parent: '组织人事管理', owner: '人力资源部' },
+    { name: 'API治理与集成编排', level: 3, parent: '集成与数据治理', owner: '企业架构组' },
+    { name: '数据治理与主数据服务', level: 3, parent: '集成与数据治理', owner: '数据治理委员会' },
+    { name: '数据仓库与BI报表', level: 3, parent: '集成与数据治理', owner: '数据平台团队' },
+    { name: '身份与访问控制', level: 3, parent: '安全与运维保障', owner: '信息安全部' },
+    { name: '监控告警与可观测性', level: 3, parent: '安全与运维保障', owner: 'SRE团队' },
+    { name: '变更发布与配置管理', level: 3, parent: '安全与运维保障', owner: '运维平台团队' }
+  ] as const
+
+  const capMap = new Map<string, string>()
+  for (const def of capabilityDefs.filter((x) => x.level === 1)) {
+    const c = await prisma.businessCapability.create({
+      data: {
+        name: def.name,
+        level: def.level,
+        owner: def.owner,
+        description: `${def.name}（L1）`,
+        lifecycleStatus: LifecycleStatus.ACTIVE
+      }
+    })
+    capMap.set(def.name, c.id)
+  }
+
+  for (const def of capabilityDefs.filter((x) => x.level !== 1)) {
+    const c = await prisma.businessCapability.create({
+      data: {
+        name: def.name,
+        level: def.level,
+        parentId: def.parent ? capMap.get(def.parent)! : null,
+        owner: def.owner,
+        description: `${def.name}（L${def.level}）`,
+        lifecycleStatus: def.name === '数据治理与主数据服务' ? LifecycleStatus.PLANNED : LifecycleStatus.ACTIVE
+      }
+    })
+    capMap.set(def.name, c.id)
+  }
+
   const stacks = await prisma.techStack.createManyAndReturn({
     data: [
       { name: 'Next.js', category: 'Frontend', description: '企业门户与管理后台前端框架' },
@@ -54,7 +92,6 @@ async function main() {
     ]
   })
 
-  // 技术平台（有实际含义）
   const platforms = await prisma.techPlatform.createManyAndReturn({
     data: [
       { name: 'AWS', vendor: 'Amazon', description: '生产环境主力公有云平台' },
@@ -68,7 +105,6 @@ async function main() {
     ]
   })
 
-  // 业务应用（有实际含义）
   const applications = await prisma.businessApplication.createManyAndReturn({
     data: [
       { name: 'CRM 系统', description: '客户管理、线索与商机全流程', owner: '销售管理部', lifecycleStatus: LifecycleStatus.ACTIVE },
@@ -84,114 +120,82 @@ async function main() {
     ]
   })
 
-  // 建立应用与业务能力关联
-  const capByName = new Map(capabilities.map(c => [c.name, c.id]))
-  const stackByName = new Map(stacks.map(s => [s.name, s.id]))
-  const platformByName = new Map(platforms.map(p => [p.name, p.id]))
-
-  const appByName = new Map(applications.map(a => [a.name, a.id]))
+  const appByName = new Map(applications.map((a) => [a.name, a.id]))
+  const stackByName = new Map(stacks.map((s) => [s.name, s.id]))
+  const platformByName = new Map(platforms.map((p) => [p.name, p.id]))
 
   const linkCapabilities: Array<{ applicationId: string; capabilityId: string }> = [
+    ['CRM 系统', '客户经营'],
     ['CRM 系统', '客户主数据管理'],
     ['CRM 系统', '线索到商机转化'],
     ['CRM 系统', '报价与合同管理'],
 
+    ['订单管理系统 OMS', '订单履约'],
     ['订单管理系统 OMS', '订单履约协同'],
-    ['订单管理系统 OMS', 'API治理与集成编排'],
 
+    ['采购管理系统 P2P', '采购与供应商协同'],
     ['采购管理系统 P2P', '采购与供应商管理'],
-    ['采购管理系统 P2P', '财务总账与应收应付'],
 
+    ['财务ERP', '核算与经营分析'],
     ['财务ERP', '财务总账与应收应付'],
-    ['财务ERP', '预算与经营分析'],
 
+    ['HR 人力系统', '组织人事管理'],
     ['HR 人力系统', '人力资源主数据'],
     ['HR 人力系统', '招聘与入离职管理'],
 
+    ['统一身份认证平台 IAM', '安全与运维保障'],
     ['统一身份认证平台 IAM', '身份与访问控制'],
 
+    ['API 集成平台 ESB', '集成与数据治理'],
     ['API 集成平台 ESB', 'API治理与集成编排'],
 
+    ['数据中台', '企业平台与治理'],
+    ['数据中台', '集成与数据治理'],
     ['数据中台', '数据治理与主数据服务'],
     ['数据中台', '数据仓库与BI报表'],
 
+    ['经营分析 BI 平台', '财务与经营管理'],
     ['经营分析 BI 平台', '预算与经营分析'],
     ['经营分析 BI 平台', '数据仓库与BI报表'],
 
+    ['可观测性平台', '安全与运维保障'],
     ['可观测性平台', '监控告警与可观测性'],
     ['可观测性平台', '变更发布与配置管理']
-  ].map(([app, cap]) => ({ applicationId: appByName.get(app)!, capabilityId: capByName.get(cap)! }))
+  ].map(([app, cap]) => ({ applicationId: appByName.get(app)!, capabilityId: capMap.get(cap)! }))
 
   await prisma.applicationCapability.createMany({ data: linkCapabilities })
 
-  // 建立应用与技术栈关联
   const linkStacks: Array<{ applicationId: string; stackId: string }> = [
-    ['CRM 系统', 'React'],
-    ['CRM 系统', 'Node.js'],
-    ['CRM 系统', 'PostgreSQL'],
-
-    ['订单管理系统 OMS', 'Java Spring Boot'],
-    ['订单管理系统 OMS', 'Kafka'],
-    ['订单管理系统 OMS', 'MySQL'],
-
-    ['采购管理系统 P2P', 'NestJS'],
-    ['采购管理系统 P2P', 'PostgreSQL'],
-
-    ['财务ERP', 'Java Spring Boot'],
-    ['财务ERP', 'PostgreSQL'],
-
-    ['HR 人力系统', 'Next.js'],
-    ['HR 人力系统', 'Node.js'],
-    ['HR 人力系统', 'PostgreSQL'],
-
-    ['统一身份认证平台 IAM', 'NestJS'],
-    ['统一身份认证平台 IAM', 'Redis'],
-
-    ['API 集成平台 ESB', 'Java Spring Boot'],
-    ['API 集成平台 ESB', 'Kafka'],
-
-    ['数据中台', 'Airflow'],
-    ['数据中台', 'dbt'],
-    ['数据中台', 'PostgreSQL'],
-
-    ['经营分析 BI 平台', 'Superset'],
-    ['经营分析 BI 平台', 'PostgreSQL'],
-
-    ['可观测性平台', 'Prometheus'],
-    ['可观测性平台', 'Grafana'],
-    ['可观测性平台', 'Elasticsearch']
+    ['CRM 系统', 'React'], ['CRM 系统', 'Node.js'], ['CRM 系统', 'PostgreSQL'],
+    ['订单管理系统 OMS', 'Java Spring Boot'], ['订单管理系统 OMS', 'Kafka'], ['订单管理系统 OMS', 'MySQL'],
+    ['采购管理系统 P2P', 'NestJS'], ['采购管理系统 P2P', 'PostgreSQL'],
+    ['财务ERP', 'Java Spring Boot'], ['财务ERP', 'PostgreSQL'],
+    ['HR 人力系统', 'Next.js'], ['HR 人力系统', 'Node.js'], ['HR 人力系统', 'PostgreSQL'],
+    ['统一身份认证平台 IAM', 'NestJS'], ['统一身份认证平台 IAM', 'Redis'],
+    ['API 集成平台 ESB', 'Java Spring Boot'], ['API 集成平台 ESB', 'Kafka'],
+    ['数据中台', 'Airflow'], ['数据中台', 'dbt'], ['数据中台', 'PostgreSQL'],
+    ['经营分析 BI 平台', 'Superset'], ['经营分析 BI 平台', 'PostgreSQL'],
+    ['可观测性平台', 'Prometheus'], ['可观测性平台', 'Grafana'], ['可观测性平台', 'Elasticsearch']
   ].map(([app, stack]) => ({ applicationId: appByName.get(app)!, stackId: stackByName.get(stack)! }))
 
   await prisma.applicationTechStack.createMany({ data: linkStacks })
 
-  // 建立应用与技术平台关联
   const linkPlatforms: Array<{ applicationId: string; platformId: string }> = [
-    ['CRM 系统', 'Salesforce'],
-    ['CRM 系统', 'AWS'],
-
-    ['订单管理系统 OMS', 'AWS'],
-    ['订单管理系统 OMS', 'Kubernetes'],
-
+    ['CRM 系统', 'Salesforce'], ['CRM 系统', 'AWS'],
+    ['订单管理系统 OMS', 'AWS'], ['订单管理系统 OMS', 'Kubernetes'],
     ['采购管理系统 P2P', 'AWS'],
-
     ['财务ERP', 'SAP S/4HANA'],
-
     ['HR 人力系统', 'AWS'],
-
     ['统一身份认证平台 IAM', 'Auth0'],
-
     ['API 集成平台 ESB', 'Kubernetes'],
-
     ['数据中台', 'Snowflake'],
-
     ['经营分析 BI 平台', 'Snowflake'],
-
     ['可观测性平台', 'Datadog']
   ].map(([app, platform]) => ({ applicationId: appByName.get(app)!, platformId: platformByName.get(platform)! }))
 
   await prisma.applicationTechPlatform.createMany({ data: linkPlatforms })
 
-  console.log('Seed completed with meaningful enterprise architecture demo data')
+  console.log('Seed completed with 3-level capabilities and cross-level app links')
 }
 
 main().finally(async () => {

@@ -1,66 +1,48 @@
-import { Suspense } from 'react'
-import { prisma } from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
-import { CapabilityApplicationTree } from '@/components/capability-application-tree'
+import { prisma } from '@/lib/prisma'
+import { CapabilityApplicationMindmap } from '@/components/capability-application-mindmap'
 
 export default async function RelationshipTreePage() {
   const [capabilities, applications] = await Promise.all([
     prisma.businessCapability.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
+        level: true,
+        parentId: true,
         appLinks: {
-          include: {
+          select: {
             application: {
               select: { id: true, name: true }
             }
           }
         }
       },
-      orderBy: { name: 'asc' }
+      orderBy: [{ level: 'asc' }, { name: 'asc' }]
     }),
     prisma.businessApplication.findMany({
-      include: {
-        capabilityLinks: {
-          include: {
-            capability: {
-              select: { id: true, name: true }
-            }
-          }
-        }
-      },
+      select: { id: true, name: true },
       orderBy: { name: 'asc' }
     })
   ])
 
-  const capabilityNodes = capabilities.map((item) => ({
-    id: item.id,
-    name: item.name,
-    applications: item.appLinks.map((link) => ({
-      id: link.application.id,
-      name: link.application.name
-    }))
-  }))
-
-  const applicationNodes = applications.map((item) => ({
-    id: item.id,
-    name: item.name,
-    capabilities: item.capabilityLinks.map((link) => ({
-      id: link.capability.id,
-      name: link.capability.name
-    }))
-  }))
-
   return (
     <div className="space-y-4">
       <Card>
-        <h2 className="text-lg font-semibold">能力-应用关系树</h2>
-        <p className="mt-1 text-sm text-slate-500">支持双向查看：业务能力 → 应用、应用 → 业务能力，可展开/收起。</p>
+        <h2 className="text-lg font-semibold">业务能力 × 应用 SVG 图谱</h2>
+        <p className="mt-1 text-sm text-slate-500">三层能力树（L1/L2/L3）与应用关联的思维导图式交互图。支持缩放、拖拽、节点选中联动。</p>
       </Card>
 
-      <Card>
-        <Suspense fallback={<p className="text-sm text-slate-500">加载关系树...</p>}>
-          <CapabilityApplicationTree capabilities={capabilityNodes} applications={applicationNodes} />
-        </Suspense>
-      </Card>
+      <CapabilityApplicationMindmap
+        capabilities={capabilities.map((item) => ({
+          id: item.id,
+          name: item.name,
+          level: item.level,
+          parentId: item.parentId,
+          applications: item.appLinks.map((link) => ({ id: link.application.id, name: link.application.name }))
+        }))}
+        applications={applications}
+      />
     </div>
   )
 }
