@@ -18,9 +18,9 @@ type Position = { x: number; y: number }
 
 const VIEWBOX_WIDTH = 1900
 const VIEWBOX_HEIGHT = 1200
-const NODE_WIDTH = 460
-const NODE_HEADER_HEIGHT = 72
-const APP_BOX_HEIGHT = 38
+const MIN_NODE_WIDTH = 360
+const MAX_NODE_WIDTH = 640
+const APP_BOX_HEIGHT = 36
 const APP_BOX_GAP = 12
 const NODE_INNER_GAP = 10
 
@@ -48,9 +48,24 @@ function fitAppLabel(name: string, maxChars = 8) {
   return name.length > maxChars ? `${name.slice(0, maxChars)}…` : name
 }
 
-function nodeHeight(appCount: number) {
-  const rows = Math.max(1, Math.ceil(appCount / 2))
-  return NODE_HEADER_HEIGHT + NODE_INNER_GAP + rows * APP_BOX_HEIGHT + (rows - 1) * 6 + NODE_INNER_GAP
+function estimateTextWidth(text: string, fontSize = 14) {
+  return text.length * fontSize * 0.56
+}
+
+function nodeWidth(cap: CapNode) {
+  const appNameMax = cap.applications.reduce((m, a) => Math.max(m, a.name.length), 8)
+  const byTitle = estimateTextWidth(cap.name, 16) + 80
+  const byApps = estimateTextWidth('字'.repeat(appNameMax), 14) * 2 + 140
+  return Math.max(MIN_NODE_WIDTH, Math.min(MAX_NODE_WIDTH, Math.max(byTitle, byApps)))
+}
+
+function nodeMetrics(cap: CapNode) {
+  const width = nodeWidth(cap)
+  const rows = Math.max(1, Math.ceil(cap.applications.length / 2))
+  const appAreaHeight = rows * APP_BOX_HEIGHT + (rows - 1) * 8 + 16
+  const headerHeight = Math.max(42, Math.round(appAreaHeight * 0.28))
+  const height = headerHeight + appAreaHeight
+  return { width, height, headerHeight }
 }
 
 function polarToXY(cx: number, cy: number, r: number, angleRad: number) {
@@ -78,12 +93,12 @@ function nudgePoint(ax: number, ay: number, tx: number, ty: number, d = 2) {
   return { x: ax + (vx / len) * d, y: ay + (vy / len) * d }
 }
 
-function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> {
+function autoRadialPositions(capabilities: CapNode[], metrics: Record<string, { width: number; height: number; headerHeight: number }>): Record<string, Position> {
   const centerX = VIEWBOX_WIDTH / 2
   const centerY = VIEWBOX_HEIGHT / 2
-  const r1 = 220
-  const r2 = 440
-  const r3 = 650
+  const r1 = 260
+  const r2 = 520
+  const r3 = 780
 
   const l1 = capabilities.filter((c) => c.level === 1).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
   const byParent = new Map<string, CapNode[]>()
@@ -106,7 +121,8 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
     const angle = -Math.PI / 2 + i * sectorSpan
     l1Angles.set(node.id, angle)
     const p = polarToXY(centerX, centerY, r1, angle)
-    positions[node.id] = { x: p.x - NODE_WIDTH / 2, y: p.y - nodeHeight(node.applications.length) / 2 }
+    const m = metrics[node.id]
+    positions[node.id] = { x: p.x - m.width / 2, y: p.y - m.height / 2 }
   })
 
   l1.forEach((parent, i) => {
@@ -118,7 +134,8 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
       const ratio = childrenL2.length === 1 ? 0.5 : idx / (childrenL2.length - 1)
       const angle = base - span / 2 + span * ratio
       const p = polarToXY(centerX, centerY, r2, angle)
-      positions[child.id] = { x: p.x - NODE_WIDTH / 2, y: p.y - nodeHeight(child.applications.length) / 2 }
+      const mc = metrics[child.id]
+      positions[child.id] = { x: p.x - mc.width / 2, y: p.y - mc.height / 2 }
 
       const childrenL3 = byParent.get(child.id) ?? []
       const spanL3 = Math.min(span * 0.62, Math.PI / 3)
@@ -126,7 +143,8 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
         const ratioL3 = childrenL3.length === 1 ? 0.5 : leafIdx / (childrenL3.length - 1)
         const angleL3 = angle - spanL3 / 2 + spanL3 * ratioL3
         const p3 = polarToXY(centerX, centerY, r3, angleL3)
-        positions[leaf.id] = { x: p3.x - NODE_WIDTH / 2, y: p3.y - nodeHeight(leaf.applications.length) / 2 }
+        const ml = metrics[leaf.id]
+        positions[leaf.id] = { x: p3.x - ml.width / 2, y: p3.y - ml.height / 2 }
       })
     })
   })
@@ -134,8 +152,8 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
   return positions
 }
 
-function autoTreePositions(capabilities: CapNode[]): Record<string, Position> {
-  const levelX: Record<number, number> = { 1: 220, 2: 640, 3: 1060 }
+function autoTreePositions(capabilities: CapNode[], metrics: Record<string, { width: number; height: number; headerHeight: number }>): Record<string, Position> {
+  const levelX: Record<number, number> = { 1: 260, 2: 780, 3: 1300 }
   const verticalGap = 36
   const byParent = new Map<string, CapNode[]>()
   capabilities.forEach((c) => {
@@ -152,11 +170,12 @@ function autoTreePositions(capabilities: CapNode[]): Record<string, Position> {
 
   const layout = (node: CapNode): number => {
     const children = byParent.get(node.id) ?? []
-    const h = nodeHeight(node.applications.length)
+    const m = metrics[node.id]
+    const h = m.height
 
     if (children.length === 0) {
       const centerY = cursorY + h / 2
-      positions[node.id] = { x: (levelX[node.level] ?? 1240) - NODE_WIDTH / 2, y: centerY - h / 2 }
+      positions[node.id] = { x: (levelX[node.level] ?? 1300) - m.width / 2, y: centerY - h / 2 }
       cursorY += h + verticalGap
       return centerY
     }
@@ -165,7 +184,7 @@ function autoTreePositions(capabilities: CapNode[]): Record<string, Position> {
     const minY = Math.min(...childCenters)
     const maxY = Math.max(...childCenters)
     const centerY = (minY + maxY) / 2
-    positions[node.id] = { x: (levelX[node.level] ?? 1240) - NODE_WIDTH / 2, y: centerY - h / 2 }
+    positions[node.id] = { x: (levelX[node.level] ?? 1300) - m.width / 2, y: centerY - h / 2 }
     return centerY
   }
 
@@ -212,9 +231,17 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     return map
   }, [capabilities])
 
+  const metricsById = useMemo(() => {
+    const map: Record<string, { width: number; height: number; headerHeight: number }> = {}
+    capabilities.forEach((c) => {
+      map[c.id] = nodeMetrics(c)
+    })
+    return map
+  }, [capabilities])
+
   const autoLayout = useMemo(
-    () => (layoutMode === 'star' ? autoRadialPositions(capabilities) : autoTreePositions(capabilities)),
-    [capabilities, layoutMode]
+    () => (layoutMode === 'star' ? autoRadialPositions(capabilities, metricsById) : autoTreePositions(capabilities, metricsById)),
+    [capabilities, layoutMode, metricsById]
   )
 
   const [positions, setPositions] = useState<Record<string, Position>>(autoLayout)
@@ -239,10 +266,11 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
         ...c,
         x: positions[c.id]?.x ?? autoLayout[c.id]?.x ?? 0,
         y: positions[c.id]?.y ?? autoLayout[c.id]?.y ?? 0,
-        width: NODE_WIDTH,
-        height: nodeHeight(c.applications.length)
+        width: metricsById[c.id].width,
+        height: metricsById[c.id].height,
+        headerHeight: metricsById[c.id].headerHeight
       }))
-  }, [capabilities, positions, autoLayout, visibility.hidden])
+  }, [capabilities, positions, autoLayout, visibility.hidden, metricsById])
 
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes])
 
@@ -290,7 +318,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
 
   const applyLayout = async (mode: 'star' | 'tree') => {
     setLayoutMode(mode)
-    const nextLayout = mode === 'star' ? autoRadialPositions(capabilities) : autoTreePositions(capabilities)
+    const nextLayout = mode === 'star' ? autoRadialPositions(capabilities, metricsById) : autoTreePositions(capabilities, metricsById)
     setPositions(nextLayout)
     setScale(1)
     setPan({ x: 0, y: 0 })
@@ -561,7 +589,9 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
               <circle cx={centerX} cy={centerY} r={11} fill="#ffffff" stroke="#111827" strokeWidth={2.2} />
 
               {nodes.map((n) => {
-                const appBoxWidth = (NODE_WIDTH - NODE_INNER_GAP * 3) / 2
+                const appRegionWidth = n.width * 0.8
+                const appRegionX = n.x + (n.width - appRegionWidth) / 2
+                const appBoxWidth = (appRegionWidth - APP_BOX_GAP) / 2
                 const isSelected = selectedId === n.id
                 const isMutedNode = nodeMutedMap.get(n.id)
                 const nodeMultiEligible = highlightMultiApps && !isMutedNode && (n.level === 2 || n.level === 3) && (n.appCount ?? n.applications.length) > 1
@@ -634,8 +664,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                     {n.applications.map((app, idx) => {
                       const row = Math.floor(idx / 2)
                       const col = idx % 2
-                      const x = n.x + NODE_INNER_GAP + col * (appBoxWidth + APP_BOX_GAP)
-                      const y = n.y + NODE_HEADER_HEIGHT + NODE_INNER_GAP + row * (APP_BOX_HEIGHT + 6)
+                      const x = appRegionX + col * (appBoxWidth + APP_BOX_GAP)
+                      const y = n.y + n.headerHeight + 8 + row * (APP_BOX_HEIGHT + 8)
                       const group = getAppGroup(app.name)
                       const palette = appGroupPalette[group] ?? appGroupPalette['其他']
                       const domainMuted = group !== '其他' && mutedDomains.has(group)
@@ -652,7 +682,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                             stroke={emphasize ? '#dc2626' : domainMuted ? palette.mutedStroke : '#111827'}
                             strokeWidth={emphasize ? 2.4 : 1.4}
                           />
-                          <text x={x + appBoxWidth / 2} y={y + 22} textAnchor="middle" fill={domainMuted ? palette.mutedText : '#0a0a0a'} fontSize="14">{fitAppLabel(app.name)}</text>
+                          <text x={x + appBoxWidth / 2} y={y + 24} textAnchor="middle" fill={domainMuted ? palette.mutedText : '#0a0a0a'} fontSize="14">{fitAppLabel(app.name)}</text>
                           <title>{app.name}</title>
                         </g>
                       )
