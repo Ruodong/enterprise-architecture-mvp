@@ -21,6 +21,8 @@ model BusinessCapability {
   owner           String?
   level           Int      @default(1)
   parentId        String?
+  diagramX        Float?
+  diagramY        Float?
   lifecycleStatus LifecycleStatus @default(ACTIVE)
   validFrom       DateTime?
   validTo         DateTime?

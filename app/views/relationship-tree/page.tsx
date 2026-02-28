@@ -9,6 +9,8 @@ export default async function RelationshipTreePage() {
       name: true,
       level: true,
       parentId: true,
+      diagramX: true,
+      diagramY: true,
       appLinks: {
         select: {
           application: {
@@ -33,6 +35,8 @@ export default async function RelationshipTreePage() {
           name: item.name,
           level: item.level,
           parentId: item.parentId,
+          diagramX: item.diagramX,
+          diagramY: item.diagramY,
           applications: item.appLinks.map((link) => ({ id: link.application.id, name: link.application.name }))
         }))}
       />

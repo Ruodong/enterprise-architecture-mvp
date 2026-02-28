@@ -8,6 +8,8 @@ type CapNode = {
   name: string
   level: number
   parentId: string | null
+  diagramX?: number | null
+  diagramY?: number | null
   applications: { id: string; name: string }[]
 }
 
@@ -39,7 +41,10 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     grouped.forEach((list, idx) => {
       let cursorY = 80
       list.forEach((cap) => {
-        map[cap.id] = { x: colX[idx], y: cursorY }
+        map[cap.id] = {
+          x: typeof cap.diagramX === 'number' ? cap.diagramX : colX[idx],
+          y: typeof cap.diagramY === 'number' ? cap.diagramY : cursorY
+        }
         cursorY += nodeHeight(cap.applications.length) + 26
       })
     })
@@ -78,6 +83,20 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     }
   }
 
+  const savePosition = async (id: string) => {
+    const p = positions[id]
+    if (!p) return
+    try {
+      await fetch('/api/capability-positions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, x: p.x, y: p.y })
+      })
+    } catch {
+      // no-op
+    }
+  }
+
   const curvePath = (fromId: string, toId: string) => {
     const from = nodeMap.get(fromId)
     const to = nodeMap.get(toId)
@@ -113,8 +132,14 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
             }))
             setDragging({ id: dragging.id, x: p.x, y: p.y })
           }}
-          onMouseUp={() => setDragging(null)}
-          onMouseLeave={() => setDragging(null)}
+          onMouseUp={() => {
+            if (dragging?.id) void savePosition(dragging.id)
+            setDragging(null)
+          }}
+          onMouseLeave={() => {
+            if (dragging?.id) void savePosition(dragging.id)
+            setDragging(null)
+          }}
         >
           {hierarchyEdges.map((edge) => {
             const active = selectedId && (selectedId === edge.from || selectedId === edge.to)
