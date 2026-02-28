@@ -280,8 +280,6 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
             }}
           >
             <g transform={`translate(${centerX * (1 - scale)} ${centerY * (1 - scale)}) scale(${scale})`}>
-              <circle cx={centerX} cy={centerY} r={10} fill="#ffffff" stroke="#cbd5e1" />
-
               {l1Nodes.map((n) => {
                 const active = selectedId === n.id
                 const x1 = centerX
@@ -313,6 +311,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                   />
                 )
               })}
+
+              <circle cx={centerX} cy={centerY} r={10} fill="#ffffff" />
 
               {nodes.map((n) => {
                 const appBoxWidth = (NODE_WIDTH - NODE_INNER_GAP * 3) / 2
