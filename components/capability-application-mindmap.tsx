@@ -312,7 +312,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 )
               })}
 
-              <circle cx={centerX} cy={centerY} r={10} fill="#ffffff" />
+              <circle cx={centerX} cy={centerY} r={10} fill="#ffffff" stroke="#cbd5e1" strokeWidth={1.2} />
 
               {nodes.map((n) => {
                 const appBoxWidth = (NODE_WIDTH - NODE_INNER_GAP * 3) / 2
