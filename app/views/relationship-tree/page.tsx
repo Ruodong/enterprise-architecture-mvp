@@ -12,6 +12,7 @@ export default async function RelationshipTreePage({
     appQ?: string
     appOwner?: string
     appStatus?: string
+    leafOnly?: string
   }
 }) {
   const capQ = searchParams?.capQ?.trim() || ''
@@ -20,6 +21,7 @@ export default async function RelationshipTreePage({
   const appQ = searchParams?.appQ?.trim() || ''
   const appOwner = searchParams?.appOwner?.trim() || ''
   const appStatus = searchParams?.appStatus?.trim() || ''
+  const leafOnly = searchParams?.leafOnly === '1'
 
   const hasCapFilter = Boolean(capQ || capOwner || capStatus)
   const hasAppFilter = Boolean(appQ || appOwner || appStatus)
@@ -41,6 +43,7 @@ export default async function RelationshipTreePage({
       lifecycleStatus: true,
       diagramX: true,
       diagramY: true,
+      children: { select: { id: true } },
       appLinks: {
         where: hasAppFilter ? { application: appWhere } : undefined,
         select: {
@@ -53,6 +56,8 @@ export default async function RelationshipTreePage({
     orderBy: [{ level: 'asc' }, { name: 'asc' }]
   })
 
+  const byId = new Map(allCapabilities.map((c) => [c.id, c]))
+
   const capMatch = (cap: (typeof allCapabilities)[number]) => {
     if (!hasCapFilter) return true
     const okName = capQ ? cap.name.toLowerCase().includes(capQ.toLowerCase()) : true
@@ -63,12 +68,13 @@ export default async function RelationshipTreePage({
 
   let capabilities = allCapabilities
 
-  if (hasAnyFilter) {
-    const byId = new Map(allCapabilities.map((c) => [c.id, c]))
+  if (hasAnyFilter || leafOnly) {
     const keep = new Set<string>()
 
-    // 只把“有应用”的能力作为筛选命中入口；没有应用的L3不显示
     allCapabilities.forEach((cap) => {
+      const isLeaf = cap.children.length === 0
+      if (leafOnly && !isLeaf) return
+
       if (capMatch(cap) && cap.appLinks.length > 0) {
         keep.add(cap.id)
         let current = cap.parentId
@@ -133,6 +139,13 @@ export default async function RelationshipTreePage({
             <option value="SUNSETTING">SUNSETTING</option>
             <option value="RETIRED">RETIRED</option>
           </select>
+
+          <div className="md:col-span-3 flex flex-wrap items-center gap-4">
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" name="leafOnly" value="1" defaultChecked={leafOnly} className="h-4 w-4 rounded border-slate-300" />
+              仅显示叶子能力（L3/无下级）
+            </label>
+          </div>
 
           <div className="md:col-span-3">
             <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">筛选</button>
