@@ -389,6 +389,16 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     nodeMutedMap.set(n.id, muted)
   })
 
+  const multiAppDomainSet = new Set<string>()
+  nodes.forEach((n) => {
+    const isMulti = (n.level === 2 || n.level === 3) && (n.appCount ?? n.applications.length) > 1
+    if (!isMulti) return
+    n.applications.forEach((a) => {
+      const g = getAppGroup(a.name)
+      if (g !== '其他') multiAppDomainSet.add(g)
+    })
+  })
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
       <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3">
@@ -439,7 +449,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 onClick={() => handleDomainButtonClick(group)}
                 className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5"
                 style={{
-                  borderColor: isMuted ? p.mutedStroke : p.stroke,
+                  borderColor: highlightMultiApps && multiAppDomainSet.has(group) ? '#dc2626' : isMuted ? p.mutedStroke : p.stroke,
                   background: isMuted ? p.mutedFill : p.fill,
                   color: isMuted ? p.mutedText : p.text
                 }}
@@ -563,6 +573,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 const appBoxWidth = (NODE_WIDTH - NODE_INNER_GAP * 3) / 2
                 const isSelected = selectedId === n.id
                 const isMutedNode = nodeMutedMap.get(n.id)
+                const nodeMultiEligible = highlightMultiApps && (n.level === 2 || n.level === 3) && (n.appCount ?? n.applications.length) > 1
                 const canToggle = n.level === 1 || n.level === 2
                 const hasChildren = (byParent.get(n.id)?.length ?? 0) > 0
                 const isCollapsed = collapsed.has(n.id)
@@ -588,8 +599,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                       height={n.height}
                       rx={14}
                       fill={isSelected ? '#eff6ff' : isMutedNode ? '#f8fafc' : '#ffffff'}
-                      stroke={isSelected ? '#0284c7' : isMutedNode ? '#e2e8f0' : '#cbd5e1'}
-                      strokeWidth={isSelected ? 2.2 : 1.4}
+                      stroke={isSelected ? '#0284c7' : nodeMultiEligible ? '#dc2626' : isMutedNode ? '#e2e8f0' : '#cbd5e1'}
+                      strokeWidth={isSelected ? 2.2 : nodeMultiEligible ? 2.2 : 1.4}
                     />
                     <text x={n.x + 12} y={n.y + 22} fill={isMutedNode ? '#94a3b8' : '#0f172a'} fontSize="12" fontWeight="700">{`L${n.level}`}</text>
                     <text x={n.x + 12} y={n.y + 40} fill={isMutedNode ? '#94a3b8' : '#0f172a'} fontSize="14" fontWeight="600">{n.name}</text>
@@ -637,7 +648,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                       const group = getAppGroup(app.name)
                       const palette = appGroupPalette[group] ?? appGroupPalette['其他']
                       const domainMuted = group !== '其他' && mutedDomains.has(group)
-                      const emphasize = highlightMultiApps && (n.appCount ?? n.applications.length) > 1
+                      const emphasize = nodeMultiEligible
                       return (
                         <g key={app.id}>
                           <rect
