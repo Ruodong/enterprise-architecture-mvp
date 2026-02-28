@@ -113,6 +113,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   const [scale, setScale] = useState(1)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [detailHidden, setDetailHidden] = useState(false)
+  const [highlightMultiApps, setHighlightMultiApps] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('ea.detailHidden')
@@ -271,6 +272,15 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 {group}
               </span>
             ))}
+          <label className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[11px] text-slate-700">
+            <input
+              type="checkbox"
+              checked={highlightMultiApps}
+              onChange={(e) => setHighlightMultiApps(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-slate-300"
+            />
+            同一L3下多应用红框高亮
+          </label>
         </div>
 
         <div className="relative">
@@ -413,9 +423,19 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                       const y = n.y + NODE_HEADER_HEIGHT + NODE_INNER_GAP + row * (APP_BOX_HEIGHT + 6)
                       const group = getAppGroup(app.name)
                       const palette = appGroupPalette[group] ?? appGroupPalette['其他']
+                      const emphasize = highlightMultiApps && n.level === 3 && n.applications.length > 1
                       return (
                         <g key={app.id}>
-                          <rect x={x} y={y} width={appBoxWidth} height={APP_BOX_HEIGHT} rx={8} fill={palette.fill} stroke={palette.stroke} strokeWidth={1} />
+                          <rect
+                            x={x}
+                            y={y}
+                            width={appBoxWidth}
+                            height={APP_BOX_HEIGHT}
+                            rx={8}
+                            fill={palette.fill}
+                            stroke={emphasize ? '#dc2626' : palette.stroke}
+                            strokeWidth={emphasize ? 2.4 : 1}
+                          />
                           <text x={x + 8} y={y + 16} fill={palette.text} fontSize="11">{app.name}</text>
                         </g>
                       )
