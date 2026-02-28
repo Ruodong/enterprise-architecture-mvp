@@ -59,9 +59,10 @@ function appBoxWidth(name: string) {
   return Math.max(120, Math.min(520, w))
 }
 
-function splitRows<T>(arr: T[]) {
+function splitRows<T>(arr: T[], cols: number) {
+  const c = Math.max(1, cols)
   const rows: T[][] = []
-  for (let i = 0; i < arr.length; i += 2) rows.push(arr.slice(i, i + 2))
+  for (let i = 0; i < arr.length; i += c) rows.push(arr.slice(i, i + c))
   return rows.length ? rows : [[]]
 }
 
@@ -69,15 +70,14 @@ function nodeMetrics(cap: CapNode) {
   const title = `L${cap.level} · ${cap.name}`
   const titleWidth = estimateTextWidth(title, TITLE_FONT_SIZE) + NODE_INNER_GAP * 2
 
-  const rows = splitRows(cap.applications)
-  const rowWidths = rows.map((row) => {
-    if (row.length === 0) return 0
-    if (row.length === 1) return appBoxWidth(row[0].name)
-    return appBoxWidth(row[0].name) + APP_BOX_GAP + appBoxWidth(row[1].name)
-  })
+  const widths = cap.applications.map((a) => appBoxWidth(a.name))
+  const longest = widths.length ? Math.max(...widths) : 140
+  const cols = longest <= 170 && cap.applications.length >= 3 ? 3 : 2
+
+  const rows = splitRows(cap.applications, cols)
+  const rowWidths = rows.map((row) => row.reduce((s, app, i) => s + appBoxWidth(app.name) + (i > 0 ? APP_BOX_GAP : 0), 0))
   const appBandWidth = Math.max(180, ...rowWidths)
 
-  // 业务能力宽度跟随标题和应用实际宽度自适应
   const width = Math.max(MIN_NODE_WIDTH, Math.min(MAX_NODE_WIDTH, Math.max(titleWidth, appBandWidth + NODE_INNER_GAP * 2 + 12)))
   const appRows = Math.max(1, rows.length)
   const headerHeight = 52
@@ -640,7 +640,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 const isMutedNode = nodeMutedMap.get(n.id)
                 const nodeMultiEligible = highlightMultiApps && !isMutedNode && (n.level === 2 || n.level === 3) && (n.appCount ?? n.applications.length) > 1
                 const canToggle = n.level === 1 || n.level === 2
-                const appRows = splitRows(n.applications)
+                const rowCols = n.width >= 620 ? 3 : 2
+                const appRows = splitRows(n.applications, rowCols)
                 const hasChildren = (byParent.get(n.id)?.length ?? 0) > 0
                 const isCollapsed = collapsed.has(n.id)
 
