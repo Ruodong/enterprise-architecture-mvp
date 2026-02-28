@@ -6,8 +6,29 @@ import { EntityForm } from '@/components/forms/entity-form'
 import { createCapability } from '@/lib/actions'
 import { Badge } from '@/components/ui/badge'
 
-export default async function CapabilitiesPage() {
+export default async function CapabilitiesPage({
+  searchParams
+}: {
+  searchParams?: { nodeType?: string; nodeId?: string }
+}) {
+  const nodeType = searchParams?.nodeType?.trim() || ''
+  const nodeId = searchParams?.nodeId?.trim() || ''
+
+  const where = {
+    ...(nodeType === 'capability' && nodeId ? { id: nodeId } : {}),
+    ...(nodeType === 'application' && nodeId
+      ? {
+          appLinks: {
+            some: {
+              applicationId: nodeId
+            }
+          }
+        }
+      : {})
+  }
+
   const items = await prisma.businessCapability.findMany({
+    where,
     include: { appLinks: true },
     orderBy: { updatedAt: 'desc' }
   })
@@ -17,6 +38,13 @@ export default async function CapabilitiesPage() {
       <Card>
         <h2 className="section-title">业务能力地图</h2>
         <p className="mb-4 muted">查看能力沉淀情况和被应用覆盖程度。</p>
+
+        {nodeType && nodeId ? (
+          <div className="mb-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+            已应用来自关系树的筛选：{nodeType === 'capability' ? '当前能力节点' : '当前应用节点关联的能力'}
+          </div>
+        ) : null}
+
         <div className="space-y-2">
           {items.length === 0 ? (
             <div className="rounded-xl border border-slate-200/85 bg-white/90 p-8 text-center text-sm text-slate-500">暂无业务能力数据</div>

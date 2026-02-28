@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown, ChevronRight, Network, Shuffle } from 'lucide-react'
 
@@ -252,6 +253,21 @@ export function CapabilityApplicationTree({
                     ))}
                   </ul>
                 )}
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Link
+                  href={`/applications?nodeType=${selected?.type ?? ''}&nodeId=${selected?.id ?? ''}`}
+                  className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-200"
+                >
+                  在应用页查看筛选
+                </Link>
+                <Link
+                  href={`/capabilities?nodeType=${selected?.type ?? ''}&nodeId=${selected?.id ?? ''}`}
+                  className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-200"
+                >
+                  在能力页查看筛选
+                </Link>
               </div>
             </div>
           )}

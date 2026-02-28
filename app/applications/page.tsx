@@ -16,10 +16,13 @@ function toneByLifecycle(status: string): 'emerald' | 'blue' | 'amber' | 'rose' 
 export default async function ApplicationsPage({
   searchParams
 }: {
-  searchParams?: { q?: string; status?: string }
+  searchParams?: { q?: string; status?: string; nodeType?: string; nodeId?: string }
 }) {
   const q = searchParams?.q?.trim() || ''
   const status = searchParams?.status?.trim() || ''
+  const nodeType = searchParams?.nodeType?.trim() || ''
+  const nodeId = searchParams?.nodeId?.trim() || ''
+  const nodeFilterOnApplications = nodeType === 'application' && nodeId
 
   const where = {
     ...(q
@@ -27,7 +30,17 @@ export default async function ApplicationsPage({
           OR: [{ name: { contains: q, mode: 'insensitive' as const } }, { owner: { contains: q, mode: 'insensitive' as const } }]
         }
       : {}),
-    ...(status ? { lifecycleStatus: status as any } : {})
+    ...(status ? { lifecycleStatus: status as any } : {}),
+    ...(nodeFilterOnApplications ? { id: nodeId } : {}),
+    ...(nodeType === 'capability' && nodeId
+      ? {
+          capabilityLinks: {
+            some: {
+              capabilityId: nodeId
+            }
+          }
+        }
+      : {})
   }
 
   const [items, total, grouped] = await Promise.all([
@@ -77,6 +90,12 @@ export default async function ApplicationsPage({
             <Sparkles className="mr-1 h-3.5 w-3.5" /> Apple-like UI
           </Badge>
         </div>
+
+        {nodeType && nodeId ? (
+          <div className="mb-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+            已应用来自关系树的筛选：{nodeType === 'application' ? '当前应用节点' : '当前能力节点关联的应用'}
+          </div>
+        ) : null}
 
         <form className="mb-4 grid gap-3 md:grid-cols-[1fr_220px_auto]">
           <input name="q" defaultValue={q} placeholder="搜索应用名称/Owner" className="mac-input" />
