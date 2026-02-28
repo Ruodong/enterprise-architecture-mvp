@@ -118,7 +118,12 @@ export default async function RelationshipTreePage({
         <p className="mt-1 text-sm text-slate-500">按业务能力属性或应用属性筛选图谱内容（能力、应用颜色分组和连线都会同步过滤）。</p>
 
         <form className="mt-4 grid gap-3 md:grid-cols-3">
-          <input name="capQ" list="capability-name-options" defaultValue={capQ} placeholder="筛选能力名称" className="mac-input" />
+          <select name="capQ" defaultValue={capQ} className="mac-input w-full">
+            <option value="">能力名称（全部）</option>
+            {capabilityNames.map((item) => (
+              <option key={item.name} value={item.name}>{item.name}</option>
+            ))}
+          </select>
           <select name="capOwner" defaultValue={capOwner} className="mac-input">
             <option value="">能力Owner（全部）</option>
             {capOwners.map((o) => (
@@ -133,7 +138,12 @@ export default async function RelationshipTreePage({
             <option value="RETIRED">RETIRED</option>
           </select>
 
-          <input name="appQ" list="application-name-options" defaultValue={appQ} placeholder="筛选应用名称" className="mac-input" />
+          <select name="appQ" defaultValue={appQ} className="mac-input w-full">
+            <option value="">应用名称（全部）</option>
+            {applicationNames.map((item) => (
+              <option key={item.name} value={item.name}>{item.name}</option>
+            ))}
+          </select>
           <select name="appOwner" defaultValue={appOwner} className="mac-input">
             <option value="">应用Owner（全部）</option>
             {appOwners.map((o) => (
@@ -159,17 +169,6 @@ export default async function RelationshipTreePage({
             <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">筛选</button>
           </div>
 
-          <datalist id="capability-name-options">
-            {capabilityNames.map((item) => (
-              <option key={item.name} value={item.name} />
-            ))}
-          </datalist>
-
-          <datalist id="application-name-options">
-            {applicationNames.map((item) => (
-              <option key={item.name} value={item.name} />
-            ))}
-          </datalist>
         </form>
       </Card>
 
