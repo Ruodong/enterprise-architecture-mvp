@@ -44,6 +44,9 @@ export default async function RelationshipTreePage({
       diagramX: true,
       diagramY: true,
       children: { select: { id: true } },
+      _count: {
+        select: { appLinks: true }
+      },
       appLinks: {
         where: hasAppFilter ? { application: appWhere } : undefined,
         select: {
@@ -189,6 +192,7 @@ export default async function RelationshipTreePage({
           parentId: item.parentId,
           diagramX: item.diagramX,
           diagramY: item.diagramY,
+          appCount: item._count.appLinks,
           applications: item.appLinks.map((link) => ({ id: link.application.id, name: link.application.name }))
         }))}
       />

@@ -10,6 +10,7 @@ type CapNode = {
   parentId: string | null
   diagramX?: number | null
   diagramY?: number | null
+  appCount?: number
   applications: { id: string; name: string }[]
 }
 
@@ -423,7 +424,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                       const y = n.y + NODE_HEADER_HEIGHT + NODE_INNER_GAP + row * (APP_BOX_HEIGHT + 6)
                       const group = getAppGroup(app.name)
                       const palette = appGroupPalette[group] ?? appGroupPalette['其他']
-                      const emphasize = highlightMultiApps && n.applications.length > 1
+                      const emphasize = highlightMultiApps && (n.appCount ?? n.applications.length) > 1
                       return (
                         <g key={app.id}>
                           <rect
