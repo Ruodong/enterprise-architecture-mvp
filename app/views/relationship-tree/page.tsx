@@ -2,11 +2,25 @@ import { Card } from '@/components/ui/card'
 import { prisma } from '@/lib/prisma'
 import { CapabilityApplicationMindmap } from '@/components/capability-application-mindmap'
 
+type CapabilityItem = {
+  id: string
+  name: string
+  level: number
+  parentId: string | null
+  owner: string | null
+  lifecycleStatus: string
+  diagramX: number | null
+  diagramY: number | null
+  children: { id: string }[]
+  _count: { appLinks: number }
+  appLinks: { application: { id: string; name: string } }[]
+}
+
 export default async function RelationshipTreePage({
   searchParams
 }: {
   searchParams?: {
-    capQ?: string
+    capId?: string
     capOwner?: string
     capStatus?: string
     appQ?: string
@@ -15,7 +29,7 @@ export default async function RelationshipTreePage({
     leafOnly?: string
   }
 }) {
-  const capQ = searchParams?.capQ?.trim() || ''
+  const capId = searchParams?.capId?.trim() || ''
   const capOwner = searchParams?.capOwner?.trim() || ''
   const capStatus = searchParams?.capStatus?.trim() || ''
   const appQ = searchParams?.appQ?.trim() || ''
@@ -23,7 +37,7 @@ export default async function RelationshipTreePage({
   const appStatus = searchParams?.appStatus?.trim() || ''
   const leafOnly = searchParams?.leafOnly === '1'
 
-  const hasCapFilter = Boolean(capQ || capOwner || capStatus)
+  const hasCapFilter = Boolean(capId || capOwner || capStatus)
   const hasAppFilter = Boolean(appQ || appOwner || appStatus)
   const hasAnyFilter = hasCapFilter || hasAppFilter
 
@@ -33,7 +47,7 @@ export default async function RelationshipTreePage({
     ...(appStatus ? { lifecycleStatus: appStatus as any } : {})
   }
 
-  const allCapabilities = await prisma.businessCapability.findMany({
+  const allCapabilities: CapabilityItem[] = await prisma.businessCapability.findMany({
     select: {
       id: true,
       name: true,
@@ -60,13 +74,41 @@ export default async function RelationshipTreePage({
   })
 
   const byId = new Map(allCapabilities.map((c) => [c.id, c]))
+  const byParent = new Map<string, CapabilityItem[]>()
+  allCapabilities.forEach((c) => {
+    if (!c.parentId) return
+    const list = byParent.get(c.parentId) ?? []
+    list.push(c)
+    byParent.set(c.parentId, list)
+  })
 
-  const capMatch = (cap: (typeof allCapabilities)[number]) => {
-    if (!hasCapFilter) return true
-    const okName = capQ ? cap.name.toLowerCase().includes(capQ.toLowerCase()) : true
+  const selectedSubtreeIds = new Set<string>()
+  const walkSubtree = (id: string) => {
+    selectedSubtreeIds.add(id)
+    const children = byParent.get(id) ?? []
+    children.forEach((child) => walkSubtree(child.id))
+  }
+  if (capId) walkSubtree(capId)
+
+  const capMatch = (cap: CapabilityItem) => {
+    const okNode = capId ? selectedSubtreeIds.has(cap.id) : true
     const okOwner = capOwner ? (cap.owner ?? '') === capOwner : true
     const okStatus = capStatus ? cap.lifecycleStatus === (capStatus as any) : true
-    return okName && okOwner && okStatus
+    return okNode && okOwner && okStatus
+  }
+
+  const buildCapabilityTreeOptions = () => {
+    const roots = allCapabilities.filter((c) => !c.parentId).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+    const ordered: CapabilityItem[] = []
+
+    const dfs = (node: CapabilityItem) => {
+      ordered.push(node)
+      const children = (byParent.get(node.id) ?? []).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+      children.forEach(dfs)
+    }
+
+    roots.forEach(dfs)
+    return ordered
   }
 
   let capabilities = allCapabilities
@@ -92,7 +134,6 @@ export default async function RelationshipTreePage({
 
     let keep = collectKeep(leafOnly)
 
-    // 避免“应用筛选 + 叶子模式”导致整图空白：若无结果，自动回退为非叶子模式
     if (keep.size === 0 && hasAppFilter && leafOnly) {
       keep = collectKeep(false)
     }
@@ -100,7 +141,7 @@ export default async function RelationshipTreePage({
     capabilities = allCapabilities.filter((c) => keep.has(c.id))
   }
 
-  const [capOwners, appOwners, capabilityNames, applicationNames] = await Promise.all([
+  const [capOwners, appOwners, applicationNames] = await Promise.all([
     prisma.businessCapability.findMany({
       select: { owner: true },
       distinct: ['owner'],
@@ -112,16 +153,14 @@ export default async function RelationshipTreePage({
       distinct: ['owner'],
       where: { owner: { not: null } },
       orderBy: { owner: 'asc' }
-    }),
-    prisma.businessCapability.findMany({
-      select: { name: true },
-      orderBy: { name: 'asc' }
     }),
     prisma.businessApplication.findMany({
       select: { name: true },
       orderBy: { name: 'asc' }
     })
   ])
+
+  const capabilityTreeOptions = buildCapabilityTreeOptions()
 
   return (
     <div className="space-y-4">
@@ -130,10 +169,10 @@ export default async function RelationshipTreePage({
         <p className="mt-1 text-sm text-slate-500">按业务能力属性或应用属性筛选图谱内容（能力、应用颜色分组和连线都会同步过滤）。</p>
 
         <form className="mt-4 grid gap-3 md:grid-cols-3">
-          <select name="capQ" defaultValue={capQ} className="mac-input w-full">
-            <option value="">能力名称（全部）</option>
-            {capabilityNames.map((item) => (
-              <option key={item.name} value={item.name}>{item.name}</option>
+          <select name="capId" defaultValue={capId} className="mac-input w-full">
+            <option value="">业务能力树（全部）</option>
+            {capabilityTreeOptions.map((item) => (
+              <option key={item.id} value={item.id}>{`${'　'.repeat(Math.max(0, item.level - 1))}L${item.level} · ${item.name}`}</option>
             ))}
           </select>
           <select name="capOwner" defaultValue={capOwner} className="mac-input">
@@ -180,7 +219,6 @@ export default async function RelationshipTreePage({
           <div className="md:col-span-3">
             <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">筛选</button>
           </div>
-
         </form>
       </Card>
 
