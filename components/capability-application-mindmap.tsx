@@ -35,9 +35,9 @@ function polarToXY(cx: number, cy: number, r: number, angleRad: number) {
 function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> {
   const centerX = VIEWBOX_WIDTH / 2
   const centerY = VIEWBOX_HEIGHT / 2
-  const r1 = 220
-  const r2 = 390
-  const r3 = 560
+  const r1 = 260
+  const r2 = 500
+  const r3 = 700
 
   const l1 = capabilities.filter((c) => c.level === 1).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
   const byParent = new Map<string, CapNode[]>()
@@ -52,17 +52,21 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
   const positions: Record<string, Position> = {}
   const l1Angles = new Map<string, number>()
 
+  // 给每个L1分配不重叠扇区，L2/L3只在各自扇区扩散，降低交叉与重叠
+  const total = Math.max(1, l1.length)
+  const sectorSpan = (Math.PI * 2) / total
+
   l1.forEach((node, i) => {
-    const angle = -Math.PI / 2 + (i * Math.PI * 2) / Math.max(1, l1.length)
+    const angle = -Math.PI / 2 + i * sectorSpan
     l1Angles.set(node.id, angle)
     const p = polarToXY(centerX, centerY, r1, angle)
     positions[node.id] = { x: p.x - NODE_WIDTH / 2, y: p.y - nodeHeight(node.applications.length) / 2 }
   })
 
-  l1.forEach((parent) => {
+  l1.forEach((parent, i) => {
     const childrenL2 = byParent.get(parent.id) ?? []
     const base = l1Angles.get(parent.id) ?? -Math.PI / 2
-    const span = Math.PI / 3
+    const span = Math.min(sectorSpan * 0.78, Math.PI / 2.2)
 
     childrenL2.forEach((child, idx) => {
       const ratio = childrenL2.length === 1 ? 0.5 : idx / (childrenL2.length - 1)
@@ -71,7 +75,7 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
       positions[child.id] = { x: p.x - NODE_WIDTH / 2, y: p.y - nodeHeight(child.applications.length) / 2 }
 
       const childrenL3 = byParent.get(child.id) ?? []
-      const spanL3 = Math.PI / 4
+      const spanL3 = Math.min(span * 0.62, Math.PI / 3)
       childrenL3.forEach((leaf, leafIdx) => {
         const ratioL3 = childrenL3.length === 1 ? 0.5 : leafIdx / (childrenL3.length - 1)
         const angleL3 = angle - spanL3 / 2 + spanL3 * ratioL3
@@ -151,6 +155,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
         .filter((e) => nodeMap.has(e.from) && nodeMap.has(e.to)),
     [nodeMap, nodes]
   )
+
+  const l1Nodes = useMemo(() => nodes.filter((n) => n.level === 1), [nodes])
 
   const selected = selectedId ? nodes.find((n) => n.id === selectedId) ?? null : null
 
@@ -271,6 +277,25 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
               <text x={centerX} y={centerY + 14} textAnchor="middle" fill="#334155" fontSize="14" fontWeight="600">
                 Capability Map
               </text>
+
+              {l1Nodes.map((n) => {
+                const active = selectedId === n.id
+                const x1 = centerX
+                const y1 = centerY
+                const x2 = n.x + n.width / 2
+                const y2 = n.y + n.height / 2
+                return (
+                  <line
+                    key={`center-${n.id}`}
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke={active ? '#7dd3fc' : '#e2e8f0'}
+                    strokeWidth={active ? 2.4 : 1.4}
+                  />
+                )
+              })}
 
               {hierarchyEdges.map((edge) => {
                 const active = selectedId && (selectedId === edge.from || selectedId === edge.to)
