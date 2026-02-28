@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { GitBranch, Star } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 type CapNode = {
@@ -402,7 +401,16 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
               className={`inline-flex h-7 w-7 items-center justify-center rounded border ${layoutMode === 'star' ? 'border-sky-300 bg-sky-100 text-sky-700' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'}`}
               title="星型布局"
             >
-              <Star className="h-3.5 w-3.5" />
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <circle cx="12" cy="12" r="2.1" />
+                <circle cx="12" cy="4" r="1.5" />
+                <circle cx="19" cy="8" r="1.5" />
+                <circle cx="19" cy="16" r="1.5" />
+                <circle cx="12" cy="20" r="1.5" />
+                <circle cx="5" cy="16" r="1.5" />
+                <circle cx="5" cy="8" r="1.5" />
+                <path d="M12 9.9V5.8M14.1 10.8L17.7 8.8M14.1 13.2L17.7 15.2M12 14.1V18.2M9.9 13.2L6.3 15.2M9.9 10.8L6.3 8.8" />
+              </svg>
             </button>
             <button
               type="button"
@@ -410,7 +418,13 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
               className={`inline-flex h-7 w-7 items-center justify-center rounded border ${layoutMode === 'tree' ? 'border-sky-300 bg-sky-100 text-sky-700' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'}`}
               title="树形布局"
             >
-              <GitBranch className="h-3.5 w-3.5" />
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <circle cx="5" cy="12" r="1.7" />
+                <circle cx="19" cy="6" r="1.5" />
+                <circle cx="19" cy="12" r="1.5" />
+                <circle cx="19" cy="18" r="1.5" />
+                <path d="M6.8 12H11.5M11.5 12V6M11.5 12V18M11.5 6H17.2M11.5 12H17.2M11.5 18H17.2" />
+              </svg>
             </button>
           </div>
         </div>
