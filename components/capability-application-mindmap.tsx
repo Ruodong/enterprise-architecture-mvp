@@ -414,16 +414,30 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
       </div>
 
       <div className="space-y-2">
-        <button
-          onClick={() => setDetailHidden((v) => !v)}
-          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
-        >
-          {detailHidden ? '显示能力节点详情' : '隐藏能力节点详情'}
-        </button>
+        {detailHidden ? (
+          <div className="flex justify-end">
+            <button
+              onClick={() => setDetailHidden(false)}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              title="显示能力节点详情"
+            >
+              +
+            </button>
+          </div>
+        ) : null}
 
         {!detailHidden ? (
           <aside className="w-[320px] rounded-xl border border-slate-200 bg-white p-4">
-            <h3 className="text-sm font-semibold text-slate-900">能力节点详情</h3>
+            <div className="mb-1 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">能力节点详情</h3>
+              <button
+                onClick={() => setDetailHidden(true)}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                title="隐藏能力节点详情"
+              >
+                −
+              </button>
+            </div>
             {!selected ? (
               <p className="mt-2 text-sm text-slate-500">点击/拖动图中能力节点后，这里显示详情。</p>
             ) : (

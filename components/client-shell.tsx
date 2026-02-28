@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AppWindowMac, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { AppWindowMac, Minus, Plus } from 'lucide-react'
 import { AppNav } from '@/components/app-nav'
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
@@ -28,27 +28,40 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
             <h1 className="text-xl font-semibold tracking-tight text-slate-900">企业架构管理控制台</h1>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setNavHidden((v) => !v)}
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
-          >
-            {navHidden ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
-            {navHidden ? '显示 Navigation' : '隐藏 Navigation'}
-          </button>
-          <div className="hidden rounded-full border border-slate-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-slate-600 md:block">macOS-style MVP</div>
-        </div>
+        <div className="hidden rounded-full border border-slate-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-slate-600 md:block">macOS-style MVP</div>
       </header>
 
       <div className={`grid gap-4 ${navHidden ? 'md:grid-cols-1' : 'md:grid-cols-[255px_1fr]'}`}>
         {!navHidden ? (
           <aside className="panel h-fit p-3">
-            <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Navigation</p>
+            <div className="mb-2 flex items-center justify-between px-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Navigation</p>
+              <button
+                onClick={() => setNavHidden(true)}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                title="隐藏 Navigation"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+            </div>
             <AppNav />
           </aside>
         ) : null}
 
-        <main>{children}</main>
+        <main>
+          {navHidden ? (
+            <div className="mb-2">
+              <button
+                onClick={() => setNavHidden(false)}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                title="显示 Navigation"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : null}
+          {children}
+        </main>
       </div>
     </div>
   )
