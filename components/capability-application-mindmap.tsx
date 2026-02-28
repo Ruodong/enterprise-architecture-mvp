@@ -280,13 +280,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
             }}
           >
             <g transform={`translate(${centerX * (1 - scale)} ${centerY * (1 - scale)}) scale(${scale})`}>
-              <circle cx={centerX} cy={centerY} r={120} fill="#ffffff" stroke="#cbd5e1" strokeDasharray="4 4" />
-              <text x={centerX} y={centerY - 6} textAnchor="middle" fill="#0f172a" fontSize="15" fontWeight="700">
-                Lenovo Business
-              </text>
-              <text x={centerX} y={centerY + 14} textAnchor="middle" fill="#334155" fontSize="14" fontWeight="600">
-                Capability Map
-              </text>
+              <circle cx={centerX} cy={centerY} r={10} fill="#ffffff" stroke="#cbd5e1" />
 
               {l1Nodes.map((n) => {
                 const active = selectedId === n.id
