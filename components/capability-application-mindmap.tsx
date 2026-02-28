@@ -90,10 +90,13 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
 
 export function CapabilityApplicationMindmap({ capabilities }: { capabilities: CapNode[] }) {
   const svgRef = useRef<SVGSVGElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [dragging, setDragging] = useState<{ id: string; x: number; y: number } | null>(null)
   const [scale, setScale] = useState(1)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [sideWidth, setSideWidth] = useState(320)
+  const [resizingPanel, setResizingPanel] = useState(false)
 
   const byParent = useMemo(() => {
     const map = new Map<string, CapNode[]>()
@@ -229,8 +232,20 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-      <div className="rounded-2xl border border-slate-200 bg-white p-3">
+    <div
+      ref={containerRef}
+      className="flex gap-3"
+      onMouseMove={(e) => {
+        if (!resizingPanel) return
+        const rect = containerRef.current?.getBoundingClientRect()
+        if (!rect) return
+        const next = Math.min(520, Math.max(240, rect.right - e.clientX))
+        setSideWidth(next)
+      }}
+      onMouseUp={() => setResizingPanel(false)}
+      onMouseLeave={() => setResizingPanel(false)}
+    >
+      <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white p-3">
         <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
           <span>Lenovo Business Capability Map · 支持缩放、拖拽，L1/L2 节点可折叠下级。</span>
           <button onClick={() => void resetToLenovoMap()} className="rounded bg-slate-100 px-2 py-1 text-slate-700 hover:bg-slate-200">重置布局</button>
@@ -403,7 +418,13 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
         </div>
       </div>
 
-      <aside className="rounded-xl border border-slate-200 bg-white p-4">
+      <div
+        onMouseDown={() => setResizingPanel(true)}
+        className="w-1.5 cursor-col-resize rounded bg-slate-200/80 hover:bg-sky-300"
+        title="拖动调整右侧详情宽度"
+      />
+
+      <aside className="shrink-0 rounded-xl border border-slate-200 bg-white p-4" style={{ width: `${sideWidth}px` }}>
         <h3 className="text-sm font-semibold text-slate-900">能力节点详情</h3>
         {!selected ? (
           <p className="mt-2 text-sm text-slate-500">点击/拖动图中能力节点后，这里显示详情。</p>
