@@ -17,8 +17,8 @@ type CapNode = {
 
 type Position = { x: number; y: number }
 
-const VIEWBOX_WIDTH = 1600
-const VIEWBOX_HEIGHT = 1080
+const VIEWBOX_WIDTH = 2200
+const VIEWBOX_HEIGHT = 1400
 const NODE_WIDTH = 300
 const NODE_HEADER_HEIGHT = 54
 const APP_BOX_HEIGHT = 28
@@ -58,12 +58,26 @@ function polarToXY(cx: number, cy: number, r: number, angleRad: number) {
   return { x: cx + r * Math.cos(angleRad), y: cy + r * Math.sin(angleRad) }
 }
 
+function rectAnchorToward(node: { x: number; y: number; width: number; height: number }, tx: number, ty: number) {
+  const cx = node.x + node.width / 2
+  const cy = node.y + node.height / 2
+  const dx = tx - cx
+  const dy = ty - cy
+  const absDx = Math.abs(dx)
+  const absDy = Math.abs(dy)
+
+  if (absDx > absDy) {
+    return { x: cx + Math.sign(dx || 1) * (node.width / 2), y: cy + (dy / (absDx || 1)) * (node.width / 2) }
+  }
+  return { x: cx + (dx / (absDy || 1)) * (node.height / 2), y: cy + Math.sign(dy || 1) * (node.height / 2) }
+}
+
 function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> {
   const centerX = VIEWBOX_WIDTH / 2
   const centerY = VIEWBOX_HEIGHT / 2
-  const r1 = 260
-  const r2 = 500
-  const r3 = 700
+  const r1 = 320
+  const r2 = 700
+  const r3 = 1020
 
   const l1 = capabilities.filter((c) => c.level === 1).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
   const byParent = new Map<string, CapNode[]>()
@@ -300,15 +314,17 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
       return `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`
     }
 
-    const x1 = from.x + from.width / 2
-    const y1 = from.y + from.height / 2
-    const x2 = to.x + to.width / 2
-    const y2 = to.y + to.height / 2
-    const cx1 = x1 + (x2 - x1) * 0.35
-    const cy1 = y1 + (y2 - y1) * 0.15
-    const cx2 = x1 + (x2 - x1) * 0.65
-    const cy2 = y1 + (y2 - y1) * 0.85
-    return `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`
+    const fromCenterX = from.x + from.width / 2
+    const fromCenterY = from.y + from.height / 2
+    const toCenterX = to.x + to.width / 2
+    const toCenterY = to.y + to.height / 2
+    const p1 = rectAnchorToward(from, toCenterX, toCenterY)
+    const p2 = rectAnchorToward(to, fromCenterX, fromCenterY)
+    const cx1 = p1.x + (p2.x - p1.x) * 0.35
+    const cy1 = p1.y + (p2.y - p1.y) * 0.15
+    const cx2 = p1.x + (p2.x - p1.x) * 0.65
+    const cy2 = p1.y + (p2.y - p1.y) * 0.85
+    return `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`
   }
 
   const toggleCollapse = (id: string) => {
@@ -487,11 +503,18 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                   )
                 }
 
-                const x1 = centerX
-                const y1 = centerY
-                const x2 = n.x + n.width / 2
-                const y2 = n.y + n.height / 2
-                return <line key={`center-${n.id}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={stroke} strokeWidth={strokeWidth} />
+                const anchor = rectAnchorToward(n, centerX, centerY)
+                const cx = centerX + (anchor.x - centerX) * 0.42
+                const cy = centerY + (anchor.y - centerY) * 0.58
+                return (
+                  <path
+                    key={`center-${n.id}`}
+                    d={`M ${centerX} ${centerY} Q ${cx} ${cy}, ${anchor.x} ${anchor.y}`}
+                    fill="none"
+                    stroke={stroke}
+                    strokeWidth={strokeWidth}
+                  />
+                )
               })}
 
               {hierarchyEdges.map((edge) => {
