@@ -72,6 +72,13 @@ function rectAnchorToward(node: { x: number; y: number; width: number; height: n
   return { x: cx + (dx / (absDy || 1)) * (node.height / 2), y: cy + Math.sign(dy || 1) * (node.height / 2) }
 }
 
+function nudgePoint(ax: number, ay: number, tx: number, ty: number, d = 2) {
+  const vx = tx - ax
+  const vy = ty - ay
+  const len = Math.hypot(vx, vy) || 1
+  return { x: ax + (vx / len) * d, y: ay + (vy / len) * d }
+}
+
 function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> {
   const centerX = VIEWBOX_WIDTH / 2
   const centerY = VIEWBOX_HEIGHT / 2
@@ -310,16 +317,20 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
       const y1 = from.y + from.height / 2
       const x2 = to.x
       const y2 = to.y + to.height / 2
-      const midX = x1 + (x2 - x1) * 0.45
-      return `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`
+      const p1 = nudgePoint(x1, y1, x2, y2, 2)
+      const p2 = nudgePoint(x2, y2, x1, y1, 2)
+      const midX = p1.x + (p2.x - p1.x) * 0.45
+      return `M ${p1.x} ${p1.y} C ${midX} ${p1.y}, ${midX} ${p2.y}, ${p2.x} ${p2.y}`
     }
 
     const fromCenterX = from.x + from.width / 2
     const fromCenterY = from.y + from.height / 2
     const toCenterX = to.x + to.width / 2
     const toCenterY = to.y + to.height / 2
-    const p1 = rectAnchorToward(from, toCenterX, toCenterY)
-    const p2 = rectAnchorToward(to, fromCenterX, fromCenterY)
+    const p1Raw = rectAnchorToward(from, toCenterX, toCenterY)
+    const p2Raw = rectAnchorToward(to, fromCenterX, fromCenterY)
+    const p1 = nudgePoint(p1Raw.x, p1Raw.y, p2Raw.x, p2Raw.y, 2)
+    const p2 = nudgePoint(p2Raw.x, p2Raw.y, p1Raw.x, p1Raw.y, 2)
     const cx1 = p1.x + (p2.x - p1.x) * 0.35
     const cy1 = p1.y + (p2.y - p1.y) * 0.15
     const cx2 = p1.x + (p2.x - p1.x) * 0.65
@@ -503,7 +514,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                   )
                 }
 
-                const anchor = rectAnchorToward(n, centerX, centerY)
+                const anchorRaw = rectAnchorToward(n, centerX, centerY)
+                const anchor = nudgePoint(anchorRaw.x, anchorRaw.y, centerX, centerY, 2)
                 const cx = centerX + (anchor.x - centerX) * 0.42
                 const cy = centerY + (anchor.y - centerY) * 0.58
                 return (
