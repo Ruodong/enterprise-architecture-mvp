@@ -18,19 +18,19 @@ type Position = { x: number; y: number }
 
 const VIEWBOX_WIDTH = 1900
 const VIEWBOX_HEIGHT = 1200
-const NODE_WIDTH = 360
-const NODE_HEADER_HEIGHT = 60
-const APP_BOX_HEIGHT = 32
-const APP_BOX_GAP = 10
+const NODE_WIDTH = 460
+const NODE_HEADER_HEIGHT = 72
+const APP_BOX_HEIGHT = 38
+const APP_BOX_GAP = 12
 const NODE_INNER_GAP = 10
 
 const appGroupPalette: Record<string, { fill: string; stroke: string; text: string; mutedFill: string; mutedStroke: string; mutedText: string }> = {
-  销售域: { fill: '#bfdbfe', stroke: '#3b82f6', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
-  供应链域: { fill: '#a5f3fc', stroke: '#06b6d4', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
-  财务域: { fill: '#ddd6fe', stroke: '#8b5cf6', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
-  人力域: { fill: '#fed7aa', stroke: '#f97316', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
-  平台域: { fill: '#bbf7d0', stroke: '#22c55e', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
-  其他: { fill: '#cbd5e1', stroke: '#64748b', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' }
+  销售域: { fill: '#bfdbfe', stroke: '#1e3a8a', text: '#0a0a0a', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
+  供应链域: { fill: '#a5f3fc', stroke: '#155e75', text: '#0a0a0a', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
+  财务域: { fill: '#ddd6fe', stroke: '#4c1d95', text: '#0a0a0a', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
+  人力域: { fill: '#fed7aa', stroke: '#9a3412', text: '#0a0a0a', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
+  平台域: { fill: '#bbf7d0', stroke: '#166534', text: '#0a0a0a', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
+  其他: { fill: '#cbd5e1', stroke: '#1f2937', text: '#0a0a0a', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' }
 }
 
 const DOMAIN_GROUPS = ['销售域', '供应链域', '财务域', '人力域', '平台域'] as const
@@ -81,9 +81,9 @@ function nudgePoint(ax: number, ay: number, tx: number, ty: number, d = 2) {
 function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> {
   const centerX = VIEWBOX_WIDTH / 2
   const centerY = VIEWBOX_HEIGHT / 2
-  const r1 = 260
-  const r2 = 520
-  const r3 = 760
+  const r1 = 220
+  const r2 = 440
+  const r3 = 650
 
   const l1 = capabilities.filter((c) => c.level === 1).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
   const byParent = new Map<string, CapNode[]>()
@@ -135,7 +135,7 @@ function autoRadialPositions(capabilities: CapNode[]): Record<string, Position> 
 }
 
 function autoTreePositions(capabilities: CapNode[]): Record<string, Position> {
-  const levelX: Record<number, number> = { 1: 240, 2: 680, 3: 1120 }
+  const levelX: Record<number, number> = { 1: 220, 2: 640, 3: 1060 }
   const verticalGap = 36
   const byParent = new Map<string, CapNode[]>()
   capabilities.forEach((c) => {
@@ -509,8 +509,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
               {l1Nodes.map((n) => {
                 const active = selectedId === n.id
                 const muted = nodeMutedMap.get(n.id)
-                const stroke = active ? '#7dd3fc' : muted ? '#e2e8f0' : '#cbd5e1'
-                const strokeWidth = active ? 2.4 : 1.4
+                const stroke = active ? '#000000' : muted ? '#d1d5db' : '#111827'
+                const strokeWidth = active ? 2.8 : 1.8
 
                 if (layoutMode === 'tree') {
                   const x1 = centerX + 11
@@ -552,13 +552,13 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                     key={`${edge.from}-${edge.to}`}
                     d={curvePath(edge.from, edge.to)}
                     fill="none"
-                    stroke={active ? '#93c5fd' : muted ? '#e5e7eb' : '#dbeafe'}
-                    strokeWidth={active ? 2.6 : 1.8}
+                    stroke={active ? '#000000' : muted ? '#e5e7eb' : '#1f2937'}
+                    strokeWidth={active ? 2.8 : 2}
                   />
                 )
               })}
 
-              <circle cx={centerX} cy={centerY} r={11} fill="#ffffff" stroke="#94a3b8" strokeWidth={2} />
+              <circle cx={centerX} cy={centerY} r={11} fill="#ffffff" stroke="#111827" strokeWidth={2.2} />
 
               {nodes.map((n) => {
                 const appBoxWidth = (NODE_WIDTH - NODE_INNER_GAP * 3) / 2
@@ -589,12 +589,12 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                       width={n.width}
                       height={n.height}
                       rx={14}
-                      fill={isSelected ? '#eff6ff' : isMutedNode ? '#f8fafc' : '#ffffff'}
-                      stroke={isSelected ? '#0284c7' : nodeMultiEligible ? '#dc2626' : isMutedNode ? '#e2e8f0' : '#cbd5e1'}
-                      strokeWidth={isSelected ? 2.2 : nodeMultiEligible ? 2.2 : 1.4}
+                      fill={isSelected ? '#f3f4f6' : isMutedNode ? '#f8fafc' : '#ffffff'}
+                      stroke={isSelected ? '#000000' : nodeMultiEligible ? '#dc2626' : isMutedNode ? '#e2e8f0' : '#111827'}
+                      strokeWidth={isSelected ? 2.8 : nodeMultiEligible ? 2.4 : 1.8}
                     />
-                    <text x={n.x + 12} y={n.y + 22} fill={isMutedNode ? '#94a3b8' : '#0f172a'} fontSize="12" fontWeight="700">{`L${n.level}`}</text>
-                    <text x={n.x + 12} y={n.y + 40} fill={isMutedNode ? '#94a3b8' : '#0f172a'} fontSize="14" fontWeight="600">{n.name}</text>
+                    <text x={n.x + 12} y={n.y + 22} fill={isMutedNode ? '#94a3b8' : '#111827'} fontSize="12" fontWeight="700">{`L${n.level}`}</text>
+                    <text x={n.x + 12} y={n.y + 40} fill={isMutedNode ? '#94a3b8' : '#111827'} fontSize="14" fontWeight="600">{n.name}</text>
 
                     {canToggle && hasChildren ? (
                       <g style={{ cursor: 'pointer' }} data-role="collapse-group">
@@ -649,10 +649,10 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                             height={APP_BOX_HEIGHT}
                             rx={8}
                             fill={domainMuted ? palette.mutedFill : palette.fill}
-                            stroke={emphasize ? '#dc2626' : domainMuted ? palette.mutedStroke : palette.stroke}
-                            strokeWidth={emphasize ? 2.4 : 1}
+                            stroke={emphasize ? '#dc2626' : domainMuted ? palette.mutedStroke : '#111827'}
+                            strokeWidth={emphasize ? 2.4 : 1.4}
                           />
-                          <text x={x + appBoxWidth / 2} y={y + 22} textAnchor="middle" fill={domainMuted ? palette.mutedText : palette.text} fontSize="14">{fitAppLabel(app.name)}</text>
+                          <text x={x + appBoxWidth / 2} y={y + 22} textAnchor="middle" fill={domainMuted ? palette.mutedText : '#0a0a0a'} fontSize="14">{fitAppLabel(app.name)}</text>
                           <title>{app.name}</title>
                         </g>
                       )
