@@ -23,6 +23,24 @@ const APP_BOX_HEIGHT = 24
 const APP_BOX_GAP = 8
 const NODE_INNER_GAP = 10
 
+const appGroupPalette: Record<string, { fill: string; stroke: string; text: string }> = {
+  销售域: { fill: '#eff6ff', stroke: '#93c5fd', text: '#1d4ed8' },
+  供应链域: { fill: '#ecfeff', stroke: '#67e8f9', text: '#0e7490' },
+  财务域: { fill: '#f5f3ff', stroke: '#c4b5fd', text: '#6d28d9' },
+  人力域: { fill: '#fff7ed', stroke: '#fdba74', text: '#c2410c' },
+  平台域: { fill: '#ecfdf5', stroke: '#86efac', text: '#15803d' },
+  其他: { fill: '#f8fafc', stroke: '#cbd5e1', text: '#334155' }
+}
+
+function getAppGroup(name: string) {
+  if (name.includes('CRM') || name.includes('销售')) return '销售域'
+  if (name.includes('订单') || name.includes('采购')) return '供应链域'
+  if (name.includes('财务') || name.includes('BI')) return '财务域'
+  if (name.includes('HR') || name.includes('人力')) return '人力域'
+  if (name.includes('IAM') || name.includes('API') || name.includes('中台') || name.includes('可观测')) return '平台域'
+  return '其他'
+}
+
 function nodeHeight(appCount: number) {
   const rows = Math.max(1, Math.ceil(appCount / 2))
   return NODE_HEADER_HEIGHT + NODE_INNER_GAP + rows * APP_BOX_HEIGHT + (rows - 1) * 6 + NODE_INNER_GAP
@@ -245,6 +263,15 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
           <span>Lenovo Business Capability Map · 支持缩放、拖拽，L1/L2 节点可折叠下级。</span>
           <button onClick={() => void resetToLenovoMap()} className="rounded bg-slate-100 px-2 py-1 text-slate-700 hover:bg-slate-200">重置布局</button>
         </div>
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+          {Object.keys(appGroupPalette)
+            .filter((k) => k !== '其他')
+            .map((group) => (
+              <span key={group} className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5" style={{ borderColor: appGroupPalette[group].stroke, background: appGroupPalette[group].fill, color: appGroupPalette[group].text }}>
+                {group}
+              </span>
+            ))}
+        </div>
 
         <div className="relative">
           <svg
@@ -384,10 +411,12 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                       const col = idx % 2
                       const x = n.x + NODE_INNER_GAP + col * (appBoxWidth + APP_BOX_GAP)
                       const y = n.y + NODE_HEADER_HEIGHT + NODE_INNER_GAP + row * (APP_BOX_HEIGHT + 6)
+                      const group = getAppGroup(app.name)
+                      const palette = appGroupPalette[group] ?? appGroupPalette['其他']
                       return (
                         <g key={app.id}>
-                          <rect x={x} y={y} width={appBoxWidth} height={APP_BOX_HEIGHT} rx={8} fill="#f8fafc" stroke="#cbd5e1" strokeWidth={1} />
-                          <text x={x + 8} y={y + 16} fill="#334155" fontSize="11">{app.name}</text>
+                          <rect x={x} y={y} width={appBoxWidth} height={APP_BOX_HEIGHT} rx={8} fill={palette.fill} stroke={palette.stroke} strokeWidth={1} />
+                          <text x={x + 8} y={y + 16} fill={palette.text} fontSize="11">{app.name}</text>
                         </g>
                       )
                     })}
