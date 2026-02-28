@@ -114,8 +114,8 @@ export default async function RelationshipTreePage({
   return (
     <div className="space-y-4">
       <Card>
-        <h2 className="text-lg font-semibold">业务能力/业务能力图</h2>
-        <p className="mt-1 text-sm text-slate-500">按业务能力属性或应用属性筛选图谱内容（能力、应用和连线都会同步过滤）。</p>
+        <h2 className="text-lg font-semibold">业务能力/应用关系图</h2>
+        <p className="mt-1 text-sm text-slate-500">按业务能力属性或应用属性筛选图谱内容（能力、应用颜色分组和连线都会同步过滤）。</p>
 
         <form className="mt-4 grid gap-3 md:grid-cols-3">
           <input name="capQ" list="capability-name-options" defaultValue={capQ} placeholder="筛选能力名称" className="mac-input" />
