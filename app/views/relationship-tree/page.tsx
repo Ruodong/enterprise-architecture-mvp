@@ -21,7 +21,9 @@ export default async function RelationshipTreePage({
   const appOwner = searchParams?.appOwner?.trim() || ''
   const appStatus = searchParams?.appStatus?.trim() || ''
 
+  const hasCapFilter = Boolean(capQ || capOwner || capStatus)
   const hasAppFilter = Boolean(appQ || appOwner || appStatus)
+  const hasAnyFilter = hasCapFilter || hasAppFilter
 
   const appWhere = {
     ...(appQ ? { name: { contains: appQ, mode: 'insensitive' as const } } : {}),
@@ -29,42 +31,58 @@ export default async function RelationshipTreePage({
     ...(appStatus ? { lifecycleStatus: appStatus as any } : {})
   }
 
-  const capabilityWhere = {
-    ...(capQ ? { name: { contains: capQ, mode: 'insensitive' as const } } : {}),
-    ...(capOwner ? { owner: { equals: capOwner } } : {}),
-    ...(capStatus ? { lifecycleStatus: capStatus as any } : {}),
-    ...(hasAppFilter
-      ? {
-          appLinks: {
-            some: {
-              application: appWhere
-            }
+  const allCapabilities = await prisma.businessCapability.findMany({
+    select: {
+      id: true,
+      name: true,
+      level: true,
+      parentId: true,
+      owner: true,
+      lifecycleStatus: true,
+      diagramX: true,
+      diagramY: true,
+      appLinks: {
+        where: hasAppFilter ? { application: appWhere } : undefined,
+        select: {
+          application: {
+            select: { id: true, name: true }
           }
         }
-      : {})
+      }
+    },
+    orderBy: [{ level: 'asc' }, { name: 'asc' }]
+  })
+
+  const capMatch = (cap: (typeof allCapabilities)[number]) => {
+    if (!hasCapFilter) return true
+    const okName = capQ ? cap.name.toLowerCase().includes(capQ.toLowerCase()) : true
+    const okOwner = capOwner ? (cap.owner ?? '') === capOwner : true
+    const okStatus = capStatus ? cap.lifecycleStatus === (capStatus as any) : true
+    return okName && okOwner && okStatus
   }
 
-  const [capabilities, capOwners, appOwners] = await Promise.all([
-    prisma.businessCapability.findMany({
-      where: capabilityWhere,
-      select: {
-        id: true,
-        name: true,
-        level: true,
-        parentId: true,
-        diagramX: true,
-        diagramY: true,
-        appLinks: {
-          where: hasAppFilter ? { application: appWhere } : undefined,
-          select: {
-            application: {
-              select: { id: true, name: true }
-            }
-          }
+  let capabilities = allCapabilities
+
+  if (hasAnyFilter) {
+    const byId = new Map(allCapabilities.map((c) => [c.id, c]))
+    const keep = new Set<string>()
+
+    // 只把“有应用”的能力作为筛选命中入口；没有应用的L3不显示
+    allCapabilities.forEach((cap) => {
+      if (capMatch(cap) && cap.appLinks.length > 0) {
+        keep.add(cap.id)
+        let current = cap.parentId
+        while (current) {
+          keep.add(current)
+          current = byId.get(current)?.parentId ?? null
         }
-      },
-      orderBy: [{ level: 'asc' }, { name: 'asc' }]
-    }),
+      }
+    })
+
+    capabilities = allCapabilities.filter((c) => keep.has(c.id))
+  }
+
+  const [capOwners, appOwners] = await Promise.all([
     prisma.businessCapability.findMany({
       select: { owner: true },
       distinct: ['owner'],
@@ -108,14 +126,15 @@ export default async function RelationshipTreePage({
               <option key={o.owner ?? 'none'} value={o.owner ?? ''}>{o.owner}</option>
             ))}
           </select>
-          <div className="flex gap-2">
-            <select name="appStatus" defaultValue={appStatus} className="mac-input">
-              <option value="">应用状态（全部）</option>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="PLANNED">PLANNED</option>
-              <option value="SUNSETTING">SUNSETTING</option>
-              <option value="RETIRED">RETIRED</option>
-            </select>
+          <select name="appStatus" defaultValue={appStatus} className="mac-input">
+            <option value="">应用状态（全部）</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="PLANNED">PLANNED</option>
+            <option value="SUNSETTING">SUNSETTING</option>
+            <option value="RETIRED">RETIRED</option>
+          </select>
+
+          <div className="md:col-span-3">
             <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">筛选</button>
           </div>
         </form>
