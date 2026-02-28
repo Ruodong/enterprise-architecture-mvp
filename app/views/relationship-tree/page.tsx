@@ -69,21 +69,30 @@ export default async function RelationshipTreePage({
   let capabilities = allCapabilities
 
   if (hasAnyFilter || leafOnly) {
-    const keep = new Set<string>()
+    const collectKeep = (enforceLeafOnly: boolean) => {
+      const keep = new Set<string>()
+      allCapabilities.forEach((cap) => {
+        const isLeaf = cap.children.length === 0
+        if (enforceLeafOnly && !isLeaf) return
 
-    allCapabilities.forEach((cap) => {
-      const isLeaf = cap.children.length === 0
-      if (leafOnly && !isLeaf) return
-
-      if (capMatch(cap) && cap.appLinks.length > 0) {
-        keep.add(cap.id)
-        let current = cap.parentId
-        while (current) {
-          keep.add(current)
-          current = byId.get(current)?.parentId ?? null
+        if (capMatch(cap) && cap.appLinks.length > 0) {
+          keep.add(cap.id)
+          let current = cap.parentId
+          while (current) {
+            keep.add(current)
+            current = byId.get(current)?.parentId ?? null
+          }
         }
-      }
-    })
+      })
+      return keep
+    }
+
+    let keep = collectKeep(leafOnly)
+
+    // 避免“应用筛选 + 叶子模式”导致整图空白：若无结果，自动回退为非叶子模式
+    if (keep.size === 0 && hasAppFilter && leafOnly) {
+      keep = collectKeep(false)
+    }
 
     capabilities = allCapabilities.filter((c) => keep.has(c.id))
   }
