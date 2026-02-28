@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { AppWindowMac, Boxes, Cpu, Layers3, LayoutList, Network, Server } from 'lucide-react'
+import { AppWindowMac, Boxes, Cpu, GitFork, Layers3, LayoutList, Network, Server } from 'lucide-react'
 
 const links = [
   { label: '业务应用', href: '/applications', icon: AppWindowMac },
@@ -11,7 +11,8 @@ const links = [
   { label: '技术平台', href: '/platforms', icon: Server },
   { label: '视角 · 按应用', href: '/views/applications', icon: LayoutList },
   { label: '视角 · 按业务能力', href: '/views/capabilities', icon: Network },
-  { label: '视角 · 按技术平台', href: '/views/platforms', icon: Cpu }
+  { label: '视角 · 按技术平台', href: '/views/platforms', icon: Cpu },
+  { label: '视角 · 能力应用树', href: '/views/relationship-tree', icon: GitFork }
 ]
 
 export function AppNav() {
