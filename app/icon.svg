@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Lenovo Business Capability Map">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#bg)"/>
+  <circle cx="64" cy="64" r="14" fill="#ffffff" fill-opacity="0.95"/>
+  <circle cx="64" cy="30" r="8" fill="#e0f2fe"/>
+  <circle cx="95" cy="64" r="8" fill="#e0f2fe"/>
+  <circle cx="64" cy="98" r="8" fill="#e0f2fe"/>
+  <circle cx="33" cy="64" r="8" fill="#e0f2fe"/>
+  <path d="M64 50 L64 38 M78 64 L87 64 M64 78 L64 90 M50 64 L41 64" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round"/>
+</svg>
