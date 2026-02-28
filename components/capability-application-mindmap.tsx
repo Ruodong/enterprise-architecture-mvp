@@ -42,6 +42,10 @@ function getAppGroup(name: string) {
   return '其他'
 }
 
+function fitAppLabel(name: string, maxChars = 10) {
+  return name.length > maxChars ? `${name.slice(0, maxChars)}…` : name
+}
+
 function nodeHeight(appCount: number) {
   const rows = Math.max(1, Math.ceil(appCount / 2))
   return NODE_HEADER_HEIGHT + NODE_INNER_GAP + rows * APP_BOX_HEIGHT + (rows - 1) * 6 + NODE_INNER_GAP
@@ -456,7 +460,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                             stroke={emphasize ? '#dc2626' : palette.stroke}
                             strokeWidth={emphasize ? 2.4 : 1}
                           />
-                          <text x={x + 8} y={y + 19} fill={palette.text} fontSize="14">{app.name}</text>
+                          <text x={x + 8} y={y + 19} fill={palette.text} fontSize="14">{fitAppLabel(app.name)}</text>
+                          <title>{app.name}</title>
                         </g>
                       )
                     })}
