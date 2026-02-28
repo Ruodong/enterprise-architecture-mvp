@@ -18,8 +18,8 @@ type Position = { x: number; y: number }
 
 const VIEWBOX_WIDTH = 1900
 const VIEWBOX_HEIGHT = 1200
-const MIN_NODE_WIDTH = 300
-const MAX_NODE_WIDTH = 760
+const MIN_NODE_WIDTH = 280
+const MAX_NODE_WIDTH = 980
 const APP_BOX_HEIGHT = 36
 const APP_BOX_GAP = 12
 const NODE_INNER_GAP = 14
@@ -47,12 +47,16 @@ function getAppGroup(name: string) {
 }
 
 function estimateTextWidth(text: string, fontSize = 14) {
-  return text.length * fontSize * 0.56
+  // 中文按全角近似，英文/数字按半角近似，避免长中文被低估导致压边
+  const cjk = (text.match(/[\u4e00-\u9fff]/g) || []).length
+  const other = text.length - cjk
+  const units = cjk * 1 + other * 0.62
+  return units * fontSize
 }
 
 function appBoxWidth(name: string) {
-  const w = estimateTextWidth(name, APP_FONT_SIZE) + 28
-  return Math.max(120, Math.min(320, w))
+  const w = estimateTextWidth(name, APP_FONT_SIZE) + 36
+  return Math.max(110, Math.min(420, w))
 }
 
 function splitRows<T>(arr: T[]) {
@@ -71,9 +75,10 @@ function nodeMetrics(cap: CapNode) {
     if (row.length === 1) return appBoxWidth(row[0].name)
     return appBoxWidth(row[0].name) + APP_BOX_GAP + appBoxWidth(row[1].name)
   })
-  const appBandWidth = Math.max(220, ...rowWidths)
+  const appBandWidth = Math.max(180, ...rowWidths)
 
-  const width = Math.max(MIN_NODE_WIDTH, Math.min(MAX_NODE_WIDTH, Math.max(titleWidth, appBandWidth + NODE_INNER_GAP * 2)))
+  // 业务能力宽度跟随标题和应用实际宽度自适应
+  const width = Math.max(MIN_NODE_WIDTH, Math.min(MAX_NODE_WIDTH, Math.max(titleWidth, appBandWidth + NODE_INNER_GAP * 2 + 12)))
   const appRows = Math.max(1, rows.length)
   const headerHeight = 52
   const appAreaHeight = appRows * APP_BOX_HEIGHT + (appRows - 1) * 10 + 16
