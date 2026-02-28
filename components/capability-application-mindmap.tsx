@@ -24,14 +24,16 @@ const APP_BOX_HEIGHT = 28
 const APP_BOX_GAP = 8
 const NODE_INNER_GAP = 10
 
-const appGroupPalette: Record<string, { fill: string; stroke: string; text: string }> = {
-  销售域: { fill: '#bfdbfe', stroke: '#3b82f6', text: '#111827' },
-  供应链域: { fill: '#a5f3fc', stroke: '#06b6d4', text: '#111827' },
-  财务域: { fill: '#ddd6fe', stroke: '#8b5cf6', text: '#111827' },
-  人力域: { fill: '#fed7aa', stroke: '#f97316', text: '#111827' },
-  平台域: { fill: '#bbf7d0', stroke: '#22c55e', text: '#111827' },
-  其他: { fill: '#cbd5e1', stroke: '#64748b', text: '#111827' }
+const appGroupPalette: Record<string, { fill: string; stroke: string; text: string; mutedFill: string; mutedStroke: string; mutedText: string }> = {
+  销售域: { fill: '#bfdbfe', stroke: '#3b82f6', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
+  供应链域: { fill: '#a5f3fc', stroke: '#06b6d4', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
+  财务域: { fill: '#ddd6fe', stroke: '#8b5cf6', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
+  人力域: { fill: '#fed7aa', stroke: '#f97316', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
+  平台域: { fill: '#bbf7d0', stroke: '#22c55e', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
+  其他: { fill: '#cbd5e1', stroke: '#64748b', text: '#111827', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' }
 }
+
+const DOMAIN_GROUPS = ['销售域', '供应链域', '财务域', '人力域', '平台域'] as const
 
 function getAppGroup(name: string) {
   if (name.includes('CRM') || name.includes('销售')) return '销售域'
@@ -121,6 +123,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [detailHidden, setDetailHidden] = useState(false)
   const [highlightMultiApps, setHighlightMultiApps] = useState(false)
+  const [mutedDomains, setMutedDomains] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const saved = localStorage.getItem('ea.detailHidden')
@@ -265,6 +268,28 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     })
   }
 
+  const toggleDomain = (domain: string) => {
+    setMutedDomains((prev) => {
+      const next = new Set(prev)
+      if (next.has(domain)) next.delete(domain)
+      else next.add(domain)
+      return next
+    })
+  }
+
+  const focusDomain = (domain: string) => {
+    const allOther = DOMAIN_GROUPS.filter((d) => d !== domain)
+    const alreadyFocused = allOther.every((d) => mutedDomains.has(d)) && !mutedDomains.has(domain)
+    setMutedDomains(alreadyFocused ? new Set() : new Set(allOther))
+  }
+
+  const nodeMutedMap = new Map<string, boolean>()
+  nodes.forEach((n) => {
+    const domains = Array.from(new Set(n.applications.map((a) => getAppGroup(a.name)).filter((g) => g !== '其他')))
+    const muted = domains.length > 0 && domains.every((d) => mutedDomains.has(d))
+    nodeMutedMap.set(n.id, muted)
+  })
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
       <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3">
@@ -273,13 +298,29 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
           <button onClick={() => void resetToLenovoMap()} className="rounded bg-slate-100 px-2 py-1 text-slate-700 hover:bg-slate-200">重置布局</button>
         </div>
         <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
-          {Object.keys(appGroupPalette)
-            .filter((k) => k !== '其他')
-            .map((group) => (
-              <span key={group} className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5" style={{ borderColor: appGroupPalette[group].stroke, background: appGroupPalette[group].fill, color: appGroupPalette[group].text }}>
+          {DOMAIN_GROUPS.map((group) => {
+            const p = appGroupPalette[group]
+            const isMuted = mutedDomains.has(group)
+            return (
+              <button
+                key={group}
+                type="button"
+                onClick={(e) => {
+                  if (e.detail > 1) return
+                  toggleDomain(group)
+                }}
+                onDoubleClick={() => focusDomain(group)}
+                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5"
+                style={{
+                  borderColor: isMuted ? p.mutedStroke : p.stroke,
+                  background: isMuted ? p.mutedFill : p.fill,
+                  color: isMuted ? p.mutedText : p.text
+                }}
+              >
                 {group}
-              </span>
-            ))}
+              </button>
+            )
+          })}
           <label className="ml-auto inline-flex items-center gap-1.5 px-1 py-0.5 text-[11px] text-slate-700">
             <input
               type="checkbox"
@@ -339,6 +380,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
             <g transform={`translate(${pan.x + centerX * (1 - scale)} ${pan.y + centerY * (1 - scale)}) scale(${scale})`}>
               {l1Nodes.map((n) => {
                 const active = selectedId === n.id
+                const muted = nodeMutedMap.get(n.id)
                 const x1 = centerX
                 const y1 = centerY
                 const x2 = n.x + n.width / 2
@@ -350,7 +392,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                     y1={y1}
                     x2={x2}
                     y2={y2}
-                    stroke={active ? '#7dd3fc' : '#e2e8f0'}
+                    stroke={active ? '#7dd3fc' : muted ? '#e2e8f0' : '#cbd5e1'}
                     strokeWidth={active ? 2.4 : 1.4}
                   />
                 )
@@ -358,12 +400,13 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
 
               {hierarchyEdges.map((edge) => {
                 const active = selectedId && (selectedId === edge.from || selectedId === edge.to)
+                const muted = nodeMutedMap.get(edge.from) && nodeMutedMap.get(edge.to)
                 return (
                   <path
                     key={`${edge.from}-${edge.to}`}
                     d={curvePath(edge.from, edge.to)}
                     fill="none"
-                    stroke={active ? '#93c5fd' : '#dbeafe'}
+                    stroke={active ? '#93c5fd' : muted ? '#e5e7eb' : '#dbeafe'}
                     strokeWidth={active ? 2.6 : 1.8}
                   />
                 )
@@ -374,6 +417,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
               {nodes.map((n) => {
                 const appBoxWidth = (NODE_WIDTH - NODE_INNER_GAP * 3) / 2
                 const isSelected = selectedId === n.id
+                const isMutedNode = nodeMutedMap.get(n.id)
                 const canToggle = n.level === 1 || n.level === 2
                 const hasChildren = (byParent.get(n.id)?.length ?? 0) > 0
                 const isCollapsed = collapsed.has(n.id)
@@ -398,12 +442,12 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                       width={n.width}
                       height={n.height}
                       rx={14}
-                      fill={isSelected ? '#eff6ff' : '#ffffff'}
-                      stroke={isSelected ? '#0284c7' : '#cbd5e1'}
+                      fill={isSelected ? '#eff6ff' : isMutedNode ? '#f8fafc' : '#ffffff'}
+                      stroke={isSelected ? '#0284c7' : isMutedNode ? '#e2e8f0' : '#cbd5e1'}
                       strokeWidth={isSelected ? 2.2 : 1.4}
                     />
-                    <text x={n.x + 12} y={n.y + 22} fill="#0f172a" fontSize="12" fontWeight="700">{`L${n.level}`}</text>
-                    <text x={n.x + 12} y={n.y + 40} fill="#0f172a" fontSize="14" fontWeight="600">{n.name}</text>
+                    <text x={n.x + 12} y={n.y + 22} fill={isMutedNode ? '#94a3b8' : '#0f172a'} fontSize="12" fontWeight="700">{`L${n.level}`}</text>
+                    <text x={n.x + 12} y={n.y + 40} fill={isMutedNode ? '#94a3b8' : '#0f172a'} fontSize="14" fontWeight="600">{n.name}</text>
 
                     {canToggle && hasChildren ? (
                       <g style={{ cursor: 'pointer' }} data-role="collapse-group">
@@ -447,6 +491,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                       const y = n.y + NODE_HEADER_HEIGHT + NODE_INNER_GAP + row * (APP_BOX_HEIGHT + 6)
                       const group = getAppGroup(app.name)
                       const palette = appGroupPalette[group] ?? appGroupPalette['其他']
+                      const domainMuted = group !== '其他' && mutedDomains.has(group)
                       const emphasize = highlightMultiApps && (n.appCount ?? n.applications.length) > 1
                       return (
                         <g key={app.id}>
@@ -456,11 +501,11 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                             width={appBoxWidth}
                             height={APP_BOX_HEIGHT}
                             rx={8}
-                            fill={palette.fill}
-                            stroke={emphasize ? '#dc2626' : palette.stroke}
+                            fill={domainMuted ? palette.mutedFill : palette.fill}
+                            stroke={emphasize ? '#dc2626' : domainMuted ? palette.mutedStroke : palette.stroke}
                             strokeWidth={emphasize ? 2.4 : 1}
                           />
-                          <text x={x + appBoxWidth / 2} y={y + 19} textAnchor="middle" fill={palette.text} fontSize="14">{fitAppLabel(app.name)}</text>
+                          <text x={x + appBoxWidth / 2} y={y + 19} textAnchor="middle" fill={domainMuted ? palette.mutedText : palette.text} fontSize="14">{fitAppLabel(app.name)}</text>
                           <title>{app.name}</title>
                         </g>
                       )
