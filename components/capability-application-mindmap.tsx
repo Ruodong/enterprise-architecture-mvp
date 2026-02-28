@@ -112,6 +112,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [dragging, setDragging] = useState<{ id: string; x: number; y: number } | null>(null)
   const [scale, setScale] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [canvasDragging, setCanvasDragging] = useState<{ x: number; y: number } | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [detailHidden, setDetailHidden] = useState(false)
   const [highlightMultiApps, setHighlightMultiApps] = useState(false)
@@ -200,8 +202,8 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     const rawX = ((clientX - rect.left) / rect.width) * VIEWBOX_WIDTH
     const rawY = ((clientY - rect.top) / rect.height) * VIEWBOX_HEIGHT
     return {
-      x: (rawX - centerX) / scale + centerX,
-      y: (rawY - centerY) / scale + centerY
+      x: (rawX - centerX - pan.x) / scale + centerX,
+      y: (rawY - centerY - pan.y) / scale + centerY
     }
   }
 
@@ -222,6 +224,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   const resetToLenovoMap = async () => {
     setPositions(autoLayout)
     setScale(1)
+    setPan({ x: 0, y: 0 })
     await Promise.all(
       capabilities.map((c) => {
         const p = autoLayout[c.id]
@@ -289,35 +292,47 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
             ref={svgRef}
             viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
             className="h-[78vh] w-full rounded-xl bg-slate-50"
-            onWheel={(e) => {
-              e.preventDefault()
-              const delta = e.deltaY > 0 ? -0.08 : 0.08
-              setScale((v) => Math.max(0.55, Math.min(1.8, Number((v + delta).toFixed(2)))))
+            onMouseDown={(e) => {
+              const target = e.target as Element
+              const inNode = !!target.closest('[data-role="node-root"]')
+              if (inNode) return
+              setCanvasDragging({ x: e.clientX, y: e.clientY })
             }}
             onMouseMove={(e) => {
-              if (!dragging) return
-              const p = toSvgPoint(e.clientX, e.clientY)
-              const dx = p.x - dragging.x
-              const dy = p.y - dragging.y
-              setPositions((prev) => ({
-                ...prev,
-                [dragging.id]: {
-                  x: (prev[dragging.id]?.x ?? 0) + dx,
-                  y: (prev[dragging.id]?.y ?? 0) + dy
-                }
-              }))
-              setDragging({ id: dragging.id, x: p.x, y: p.y })
+              if (dragging) {
+                const p = toSvgPoint(e.clientX, e.clientY)
+                const dx = p.x - dragging.x
+                const dy = p.y - dragging.y
+                setPositions((prev) => ({
+                  ...prev,
+                  [dragging.id]: {
+                    x: (prev[dragging.id]?.x ?? 0) + dx,
+                    y: (prev[dragging.id]?.y ?? 0) + dy
+                  }
+                }))
+                setDragging({ id: dragging.id, x: p.x, y: p.y })
+                return
+              }
+
+              if (canvasDragging) {
+                const dx = ((e.clientX - canvasDragging.x) / (svgRef.current?.clientWidth || 1)) * VIEWBOX_WIDTH
+                const dy = ((e.clientY - canvasDragging.y) / (svgRef.current?.clientHeight || 1)) * VIEWBOX_HEIGHT
+                setPan((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
+                setCanvasDragging({ x: e.clientX, y: e.clientY })
+              }
             }}
             onMouseUp={() => {
               if (dragging?.id) void savePosition(dragging.id)
               setDragging(null)
+              setCanvasDragging(null)
             }}
             onMouseLeave={() => {
               if (dragging?.id) void savePosition(dragging.id)
               setDragging(null)
+              setCanvasDragging(null)
             }}
           >
-            <g transform={`translate(${centerX * (1 - scale)} ${centerY * (1 - scale)}) scale(${scale})`}>
+            <g transform={`translate(${pan.x + centerX * (1 - scale)} ${pan.y + centerY * (1 - scale)}) scale(${scale})`}>
               {l1Nodes.map((n) => {
                 const active = selectedId === n.id
                 const x1 = centerX
@@ -362,6 +377,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                 return (
                   <g
                     key={n.id}
+                    data-role="node-root"
                     onMouseDown={(e) => {
                       const target = e.target as SVGElement
                       const role = target.dataset.role || target.parentElement?.getAttribute('data-role') || ''
