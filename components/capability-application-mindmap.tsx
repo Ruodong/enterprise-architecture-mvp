@@ -460,7 +460,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
                             stroke={emphasize ? '#dc2626' : palette.stroke}
                             strokeWidth={emphasize ? 2.4 : 1}
                           />
-                          <text x={x + 8} y={y + 19} fill={palette.text} fontSize="14">{fitAppLabel(app.name)}</text>
+                          <text x={x + appBoxWidth / 2} y={y + 19} textAnchor="middle" fill={palette.text} fontSize="14">{fitAppLabel(app.name)}</text>
                           <title>{app.name}</title>
                         </g>
                       )
