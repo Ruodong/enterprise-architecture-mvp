@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
 import { CapabilityApplicationTree } from '@/components/capability-application-tree'
@@ -56,7 +57,9 @@ export default async function RelationshipTreePage() {
       </Card>
 
       <Card>
-        <CapabilityApplicationTree capabilities={capabilityNodes} applications={applicationNodes} />
+        <Suspense fallback={<p className="text-sm text-slate-500">加载关系树...</p>}>
+          <CapabilityApplicationTree capabilities={capabilityNodes} applications={applicationNodes} />
+        </Suspense>
       </Card>
     </div>
   )
