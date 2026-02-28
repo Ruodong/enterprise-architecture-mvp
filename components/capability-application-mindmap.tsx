@@ -42,7 +42,7 @@ function getAppGroup(name: string) {
   return '其他'
 }
 
-function fitAppLabel(name: string, maxChars = 10) {
+function fitAppLabel(name: string, maxChars = 8) {
   return name.length > maxChars ? `${name.slice(0, maxChars)}…` : name
 }
 
