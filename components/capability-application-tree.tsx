@@ -87,6 +87,7 @@ export function CapabilityApplicationTree({
         title: `能力：${node.name}`,
         subtitle: `关联应用 ${node.applications.length}`,
         relationLabel: '关联应用',
+        relationType: 'application' as const,
         relations: node.applications
       }
     }
@@ -97,6 +98,7 @@ export function CapabilityApplicationTree({
       title: `应用：${node.name}`,
       subtitle: `关联能力 ${node.capabilities.length}`,
       relationLabel: '关联能力',
+      relationType: 'capability' as const,
       relations: node.capabilities
     }
   }, [applicationMap, capabilityMap, selected])
@@ -247,8 +249,13 @@ export function CapabilityApplicationTree({
                 ) : (
                   <ul className="space-y-1">
                     {selectedDetail.relations.map((item) => (
-                      <li key={item.id} className="rounded-md bg-slate-50 px-2 py-1 text-sm text-slate-700">
-                        {item.name}
+                      <li key={item.id}>
+                        <Link
+                          href={selectedDetail.relationType === 'application' ? `/applications/${item.id}` : `/capabilities/${item.id}`}
+                          className="block rounded-md bg-slate-50 px-2 py-1 text-sm text-slate-700 hover:bg-slate-100 hover:text-sky-700"
+                        >
+                          {item.name}
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -256,6 +263,12 @@ export function CapabilityApplicationTree({
               </div>
 
               <div className="flex flex-wrap gap-2 pt-1">
+                <Link
+                  href={selected?.type === 'application' ? `/applications/${selected.id}` : `/capabilities/${selected?.id ?? ''}`}
+                  className="rounded-lg bg-sky-100 px-2.5 py-1.5 text-xs text-sky-800 hover:bg-sky-200"
+                >
+                  打开当前节点详情
+                </Link>
                 <Link
                   href={`/applications?nodeType=${selected?.type ?? ''}&nodeId=${selected?.id ?? ''}`}
                   className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-200"
