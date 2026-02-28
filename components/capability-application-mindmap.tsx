@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type CapNode = {
   id: string
@@ -95,6 +95,15 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   const [scale, setScale] = useState(1)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [detailHidden, setDetailHidden] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ea.detailHidden')
+    if (saved === '1') setDetailHidden(true)
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('ea.detailHidden', detailHidden ? '1' : '0')
+  }, [detailHidden])
 
   const byParent = useMemo(() => {
     const map = new Map<string, CapNode[]>()

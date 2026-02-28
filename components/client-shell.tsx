@@ -1,11 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AppWindowMac, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { AppNav } from '@/components/app-nav'
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
   const [navHidden, setNavHidden] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ea.navHidden')
+    if (saved === '1') setNavHidden(true)
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('ea.navHidden', navHidden ? '1' : '0')
+  }, [navHidden])
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-4 py-5 md:px-6 md:py-6">
