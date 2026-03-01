@@ -2,6 +2,12 @@
 
 一个面向企业架构梳理的 Web MVP：以“业务能力（Capability）—业务应用（Application）—技术栈（Tech Stack）—技术平台（Platform）”为核心对象，支持主数据管理、关系管理与多视角浏览。
 
+## 关系图示例（复杂业务能力应用 Map）
+
+![业务能力应用关系图示例](./public/relationship-tree-map.png)
+
+> 截图页面：`/views/relationship-tree`
+
 ## 技术栈
 
 - **Next.js 14**（App Router）
