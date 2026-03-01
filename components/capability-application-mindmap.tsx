@@ -26,6 +26,9 @@ const NODE_INNER_GAP = 14
 const TITLE_FONT_SIZE = 16
 const APP_FONT_SIZE = 14
 
+const TREE_COLUMN_GAP = 360
+const TREE_CENTER_X = 320
+
 const appGroupPalette: Record<string, { fill: string; stroke: string; text: string; mutedFill: string; mutedStroke: string; mutedText: string }> = {
   销售域: { fill: '#bfdbfe', stroke: '#1e3a8a', text: '#0a0a0a', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
   供应链域: { fill: '#a5f3fc', stroke: '#155e75', text: '#0a0a0a', mutedFill: '#f1f5f9', mutedStroke: '#cbd5e1', mutedText: '#94a3b8' },
@@ -171,7 +174,11 @@ function autoRadialPositions(capabilities: CapNode[], metrics: Record<string, { 
 }
 
 function autoTreePositions(capabilities: CapNode[], metrics: Record<string, { width: number; height: number; headerHeight: number }>): Record<string, Position> {
-  const levelX: Record<number, number> = { 1: 260, 2: 780, 3: 1300 }
+  const levelX: Record<number, number> = {
+    1: TREE_CENTER_X + TREE_COLUMN_GAP,
+    2: TREE_CENTER_X + TREE_COLUMN_GAP * 2,
+    3: TREE_CENTER_X + TREE_COLUMN_GAP * 3
+  }
   const verticalGap = 36
   const byParent = new Map<string, CapNode[]>()
   capabilities.forEach((c) => {
@@ -214,6 +221,25 @@ function autoTreePositions(capabilities: CapNode[], metrics: Record<string, { wi
   return positions
 }
 
+function treeHubY(
+  layout: Record<string, Position>,
+  capabilities: CapNode[],
+  metrics: Record<string, { width: number; height: number; headerHeight: number }>
+) {
+  const l1Centers = capabilities
+    .filter((c) => c.level === 1)
+    .map((c) => {
+      const p = layout[c.id]
+      const m = metrics[c.id]
+      if (!p || !m) return null
+      return p.y + m.height / 2
+    })
+    .filter((y): y is number => y !== null)
+
+  if (!l1Centers.length) return VIEWBOX_HEIGHT / 2
+  return (Math.min(...l1Centers) + Math.max(...l1Centers)) / 2
+}
+
 export function CapabilityApplicationMindmap({ capabilities }: { capabilities: CapNode[] }) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -241,7 +267,7 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   }, [detailHidden])
 
   useEffect(() => {
-    setCenterPos({ x: layoutMode === 'star' ? VIEWBOX_WIDTH / 2 : 80, y: VIEWBOX_HEIGHT / 2 })
+    setCenterPos({ x: layoutMode === 'star' ? VIEWBOX_WIDTH / 2 : TREE_CENTER_X, y: VIEWBOX_HEIGHT / 2 })
   }, [layoutMode])
 
   const byParent = useMemo(() => {
@@ -269,6 +295,11 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
   )
 
   const [positions, setPositions] = useState<Record<string, Position>>(autoLayout)
+
+  useEffect(() => {
+    if (layoutMode !== 'tree') return
+    setCenterPos({ x: TREE_CENTER_X, y: treeHubY(autoLayout, capabilities, metricsById) })
+  }, [layoutMode, autoLayout, capabilities, metricsById])
 
   const visibility = useMemo(() => {
     const hidden = new Set<string>()
@@ -346,7 +377,11 @@ export function CapabilityApplicationMindmap({ capabilities }: { capabilities: C
     setPositions(nextLayout)
     setScale(1)
     setPan({ x: 0, y: 0 })
-    setCenterPos({ x: mode === 'star' ? VIEWBOX_WIDTH / 2 : 80, y: VIEWBOX_HEIGHT / 2 })
+    setCenterPos(
+      mode === 'star'
+        ? { x: VIEWBOX_WIDTH / 2, y: VIEWBOX_HEIGHT / 2 }
+        : { x: TREE_CENTER_X, y: treeHubY(nextLayout, capabilities, metricsById) }
+    )
     await Promise.all(
       capabilities.map((c) => {
         const p = nextLayout[c.id]
